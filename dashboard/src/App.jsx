@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
-const API_URL = 'http://localhost:8000'
-const WS_URL = 'ws://localhost:8000/ws'
+const API_URL = 'https://diphyodont-zachery-multifamilial.ngrok-free.dev'
+const WS_URL = 'wss://diphyodont-zachery-multifamilial.ngrok-free.dev/ws'
 
 // Format bytes to human readable
 function formatBytes(bytes) {
