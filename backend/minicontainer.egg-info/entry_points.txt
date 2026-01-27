@@ -1,0 +1,2 @@
+[console_scripts]
+minicontainer = minicontainer.cli:main

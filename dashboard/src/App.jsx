@@ -1,0 +1,815 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
+import './App.css'
+
+const API_URL = 'http://localhost:8000'
+const WS_URL = 'ws://localhost:8000/ws'
+
+// Format bytes to human readable
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
+// Status Badge Component
+function StatusBadge({ status }) {
+  const labels = {
+    running: 'Running',
+    created: 'Created',
+    stopped: 'Stopped',
+    unknown: 'Unknown'
+  }
+
+  return (
+    <span className={`status-badge ${status}`}>
+      <span className="status-dot"></span>
+      {labels[status] || status}
+    </span>
+  )
+}
+
+// Live Chart Component
+function LiveChart({ data, color, label }) {
+  if (!data || data.length < 2) return null
+
+  const width = 100
+  const height = 100
+  const max = Math.max(...data, 1)
+
+  const points = data.map((val, i) => {
+    const x = (i / (data.length - 1)) * width
+    const y = height - (val / max) * height * 0.9
+    return `${x},${y}`
+  }).join(' ')
+
+  const areaPoints = `0,${height} ${points} ${width},${height}`
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="chart-svg">
+      <defs>
+        <linearGradient id={`gradient-${color}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon fill={`url(#gradient-${color})`} points={areaPoints} />
+      <polyline fill="none" stroke={color} strokeWidth="2" points={points} />
+    </svg>
+  )
+}
+
+// Running Container Section with Dual Live Charts
+function RunningContainersSection({ containers, metrics, history }) {
+  const runningContainers = containers.filter(c => c.state === 'running')
+
+  if (runningContainers.length === 0) return null
+
+  return (
+    <div className="live-chart-section">
+      <h2>
+        <span className="pulse"></span>
+        Live Monitoring ({runningContainers.length} running)
+      </h2>
+
+      {runningContainers.map(container => {
+        const m = metrics[container.id] || {}
+        const h = history[container.id] || { cpu: [], mem: [] }
+        const memPercent = m.memory_bytes && m.memory_limit_bytes > 0
+          ? (m.memory_bytes / m.memory_limit_bytes * 100) : 0
+
+        return (
+          <div key={container.id} className="live-chart-container">
+            <div className="chart-header">
+              <span className="chart-title">🐳 {container.name}</span>
+              <span className="chart-status">● Live</span>
+            </div>
+
+            {/* Stats Row */}
+            <div className="chart-stats">
+              <div className="chart-stat">
+                <span className="chart-stat-value cpu-value">{(m.cpu_percent || 0).toFixed(1)}%</span>
+                <span className="chart-stat-label">CPU Usage</span>
+              </div>
+              <div className="chart-stat">
+                <span className="chart-stat-value mem-value">{formatBytes(m.memory_bytes || 0)}</span>
+                <span className="chart-stat-label">Memory Used</span>
+              </div>
+              <div className="chart-stat">
+                <span className="chart-stat-value">{memPercent.toFixed(0)}%</span>
+                <span className="chart-stat-label">Mem %</span>
+              </div>
+              <div className="chart-stat">
+                <span className="chart-stat-value">{m.pids || 0}</span>
+                <span className="chart-stat-label">Processes</span>
+              </div>
+            </div>
+
+            {/* Dual Graph Section */}
+            <div className="dual-charts">
+              {/* CPU Graph */}
+              <div className="chart-panel cpu-panel">
+                <div className="chart-panel-header">
+                  <span className="chart-panel-label">
+                    <span className="legend-dot cpu"></span>
+                    CPU Usage
+                  </span>
+                  <span className="chart-panel-value">{(m.cpu_percent || 0).toFixed(1)}%</span>
+                </div>
+                <LiveChart data={h.cpu} color="#ff9f00" label="CPU" />
+              </div>
+
+              {/* Memory Graph */}
+              <div className="chart-panel mem-panel">
+                <div className="chart-panel-header">
+                  <span className="chart-panel-label">
+                    <span className="legend-dot mem"></span>
+                    Memory Usage
+                  </span>
+                  <span className="chart-panel-value">{formatBytes(m.memory_bytes || 0)}</span>
+                </div>
+                <LiveChart data={h.mem.map(v => v / 1048576)} color="#00d4ff" label="Memory" />
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// Container Card Component
+function ContainerCard({ container, metrics, onAction, actionLoading, onMonitor, onExec }) {
+  const m = metrics || {}
+  const memPercent = m.memory_bytes && m.memory_limit_bytes > 0
+    ? (m.memory_bytes / m.memory_limit_bytes * 100) : 0
+
+  return (
+    <div className={`container-card ${container.state}`}>
+      <div className="container-card-header">
+        <div className="container-info">
+          <h3>🐳 {container.name}</h3>
+          <div className="container-id">{container.id}</div>
+        </div>
+        <StatusBadge status={container.state} />
+      </div>
+
+      <div className="container-metrics">
+        <div className="metric-row">
+          <span className="metric-icon">⚡</span>
+          <span className="metric-label">CPU</span>
+          <div className="metric-bar">
+            <div className="metric-fill cpu" style={{ width: `${Math.min(m.cpu_percent || 0, 100)}%` }}></div>
+          </div>
+          <span className="metric-value">{(m.cpu_percent || 0).toFixed(1)}%</span>
+        </div>
+
+        <div className="metric-row">
+          <span className="metric-icon">💾</span>
+          <span className="metric-label">Memory</span>
+          <div className="metric-bar">
+            <div className="metric-fill mem" style={{ width: `${Math.min(memPercent, 100)}%` }}></div>
+          </div>
+          <span className="metric-value">{formatBytes(m.memory_bytes || 0)}</span>
+        </div>
+
+        <div className="metric-row">
+          <span className="metric-icon">🔢</span>
+          <span className="metric-label">Processes</span>
+          <span className="metric-value" style={{ marginLeft: 'auto' }}>{m.pids || 0}</span>
+        </div>
+      </div>
+
+      <div className="container-actions">
+        <button className="btn btn-monitor" onClick={() => onMonitor(container)}>
+          📊 Details
+        </button>
+
+        {container.state === 'running' ? (
+          <button
+            className="btn btn-stop"
+            onClick={() => onAction('stop', container.id)}
+            disabled={actionLoading}
+          >
+            ⏹ Stop
+          </button>
+        ) : (
+          <button
+            className="btn btn-start"
+            onClick={() => onExec(container)}
+            disabled={actionLoading}
+          >
+            ▶ Start
+          </button>
+        )}
+
+        <button
+          className="btn btn-delete btn-icon"
+          onClick={() => onAction('delete', container.id)}
+          disabled={actionLoading || container.state === 'running'}
+          title={container.state === 'running' ? 'Stop first' : 'Delete'}
+        >
+          🗑
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Monitor Modal
+function MonitorModal({ container, metrics, history, onClose }) {
+  if (!container) return null
+  const m = metrics || {}
+  const h = history || { cpu: [], mem: [] }
+  const memPercent = m.memory_bytes && m.memory_limit_bytes > 0
+    ? (m.memory_bytes / m.memory_limit_bytes * 100) : 0
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal monitor-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>📊 {container.name}</h2>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="modal-body">
+          <div className="monitor-stats">
+            <div className="monitor-stat-card">
+              <div className="stat-header">
+                <span className="stat-icon">⚡</span>
+                <span>CPU Usage</span>
+              </div>
+              <div className="stat-value-large">{(m.cpu_percent || 0).toFixed(1)}%</div>
+              <div className="stat-bar">
+                <div className="stat-bar-fill cpu" style={{ width: `${Math.min(m.cpu_percent || 0, 100)}%` }}></div>
+              </div>
+            </div>
+
+            <div className="monitor-stat-card">
+              <div className="stat-header">
+                <span className="stat-icon">💾</span>
+                <span>Memory</span>
+              </div>
+              <div className="stat-value-large">{formatBytes(m.memory_bytes || 0)}</div>
+              <div className="stat-detail">of {formatBytes(m.memory_limit_bytes || 0)}</div>
+              <div className="stat-bar">
+                <div className="stat-bar-fill mem" style={{ width: `${Math.min(memPercent, 100)}%` }}></div>
+              </div>
+            </div>
+
+            <div className="monitor-stat-card">
+              <div className="stat-header">
+                <span className="stat-icon">🔢</span>
+                <span>Processes</span>
+              </div>
+              <div className="stat-value-large">{m.pids || 0}</div>
+            </div>
+
+            <div className="monitor-stat-card">
+              <div className="stat-header">
+                <span className="stat-icon">🏷</span>
+                <span>Status</span>
+              </div>
+              <div className="stat-value-large" style={{ fontSize: '1rem' }}>
+                <StatusBadge status={container.state} />
+              </div>
+            </div>
+          </div>
+
+          {h.cpu.length > 1 && (
+            <div style={{ marginTop: '1rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                CPU History
+              </div>
+              <LiveChart data={h.cpu} color="#eab308" label="CPU" />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Execute Command Modal - Shows when clicking Start
+function ExecuteCommandModal({ container, isOpen, onClose, onExecute }) {
+  const [selectedCmd, setSelectedCmd] = useState('1')
+  const [duration, setDuration] = useState(60)
+  const [memorySize, setMemorySize] = useState(50)
+  const [customCmd, setCustomCmd] = useState('echo Hello from container')
+  const [executing, setExecuting] = useState(false)
+
+  if (!isOpen || !container) return null
+
+  const commands = [
+    { id: '1', icon: '🔥', name: 'CPU Stress', desc: 'Intensive counting loop - high CPU usage' },
+    { id: '2', icon: '💾', name: 'Memory Stress', desc: 'Allocate and hold memory' },
+    { id: '3', icon: '🔄', name: 'Combined Stress', desc: 'CPU + Memory together' },
+    { id: '4', icon: '⏱️', name: 'Sleep Process', desc: 'Keep container running for monitoring' },
+    { id: '5', icon: '📊', name: 'Math Calculations', desc: 'Heavy math operations' },
+    { id: '6', icon: '✏️', name: 'Custom Command', desc: 'Enter your own shell command' },
+  ]
+
+  const handleExecute = async () => {
+    setExecuting(true)
+    await onExecute(container.id, selectedCmd, { duration, memorySize, customCmd })
+    setExecuting(false)
+    onClose()
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal exec-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>⚡ Execute Command</h2>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="modal-body">
+          <div className="exec-container-info">
+            <span className="exec-label">Container:</span>
+            <span className="exec-name">🐳 {container.name}</span>
+          </div>
+
+          <div className="command-list">
+            {commands.map(cmd => (
+              <div
+                key={cmd.id}
+                className={`command-item ${selectedCmd === cmd.id ? 'selected' : ''}`}
+                onClick={() => setSelectedCmd(cmd.id)}
+              >
+                <span className="cmd-icon">{cmd.icon}</span>
+                <div className="cmd-info">
+                  <span className="cmd-name">{cmd.name}</span>
+                  <span className="cmd-desc">{cmd.desc}</span>
+                </div>
+                <span className="cmd-radio">{selectedCmd === cmd.id ? '●' : '○'}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Duration input for most commands */}
+          {['1', '2', '3', '4', '5'].includes(selectedCmd) && (
+            <div className="form-group">
+              <label>Duration: {duration} seconds</label>
+              <input
+                type="range"
+                min="10"
+                max="300"
+                value={duration}
+                onChange={e => setDuration(parseInt(e.target.value))}
+              />
+            </div>
+          )}
+
+          {/* Memory size for memory-related commands */}
+          {['2', '3'].includes(selectedCmd) && (
+            <div className="form-group">
+              <label>Memory Size: {memorySize} MB</label>
+              <input
+                type="range"
+                min="10"
+                max="200"
+                value={memorySize}
+                onChange={e => setMemorySize(parseInt(e.target.value))}
+              />
+            </div>
+          )}
+
+          {/* Custom command input */}
+          {selectedCmd === '6' && (
+            <div className="form-group">
+              <label>Custom Command</label>
+              <input
+                type="text"
+                value={customCmd}
+                onChange={e => setCustomCmd(e.target.value)}
+                placeholder="Enter shell command..."
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button
+            className="btn btn-primary"
+            onClick={handleExecute}
+            disabled={executing}
+          >
+            {executing ? '⏳ Executing...' : '▶ Execute'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Create Container Modal
+function CreateContainerModal({ isOpen, onClose, onCreate }) {
+  const [name, setName] = useState('')
+  const [rootfs, setRootfs] = useState('/tmp/alpine-rootfs')
+  const [memory, setMemory] = useState('256')
+  const [cpus, setCpus] = useState('50')
+  const [pids, setPids] = useState('100')
+
+  if (!isOpen) return null
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onCreate({
+      name: name || `container-${Date.now()}`,
+      rootfs: rootfs,
+      memory_limit: parseInt(memory) * 1024 * 1024,
+      cpu_percent: parseInt(cpus),
+      pids_max: parseInt(pids)
+    })
+    onClose()
+    setName('')
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>🐳 Create Container</h2>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body">
+            <div className="form-group">
+              <label>Container Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="my-container"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Rootfs Path <span className="hint">(filesystem directory)</span></label>
+              <input
+                type="text"
+                value={rootfs}
+                onChange={e => setRootfs(e.target.value)}
+                placeholder="/tmp/alpine-rootfs"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Memory Limit: {memory} MB</label>
+              <input
+                type="range"
+                min="64"
+                max="2048"
+                value={memory}
+                onChange={e => setMemory(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>CPU Limit: {cpus}%</label>
+              <input
+                type="range"
+                min="5"
+                max="100"
+                value={cpus}
+                onChange={e => setCpus(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Max Processes: {pids}</label>
+              <input
+                type="range"
+                min="10"
+                max="500"
+                value={pids}
+                onChange={e => setPids(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="modal-footer">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Create Container</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Main App Component
+function App() {
+  const [containers, setContainers] = useState([])
+  const [metrics, setMetrics] = useState({})
+  const [history, setHistory] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [wsStatus, setWsStatus] = useState('disconnected')
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [monitorContainer, setMonitorContainer] = useState(null)
+  const [execContainer, setExecContainer] = useState(null)
+  const [notification, setNotification] = useState(null)
+  const [actionLoading, setActionLoading] = useState(false)
+  const wsRef = useRef(null)
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 3000)
+  }
+
+  const fetchContainers = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/containers`)
+      if (res.ok) {
+        const data = await res.json()
+        setContainers(data)
+      }
+    } catch (e) {
+      console.error('Failed to fetch containers:', e)
+    }
+    setLoading(false)
+  }, [])
+
+  // WebSocket connection
+  useEffect(() => {
+    const connect = () => {
+      const ws = new WebSocket(WS_URL)
+      wsRef.current = ws
+
+      ws.onopen = () => setWsStatus('connected')
+      ws.onclose = () => {
+        setWsStatus('disconnected')
+        setTimeout(connect, 3000)
+      }
+      ws.onerror = () => setWsStatus('error')
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'metrics') {
+            setContainers(data.containers || [])
+            setMetrics(data.metrics || {})
+
+            // Update history
+            setHistory(prev => {
+              const newHistory = { ...prev }
+              for (const [id, m] of Object.entries(data.metrics || {})) {
+                if (!newHistory[id]) {
+                  newHistory[id] = { cpu: [], mem: [] }
+                }
+                newHistory[id].cpu = [...(newHistory[id].cpu || []).slice(-30), m.cpu_percent || 0]
+                newHistory[id].mem = [...(newHistory[id].mem || []).slice(-30), m.memory_bytes || 0]
+              }
+              return newHistory
+            })
+          }
+        } catch (e) {
+          console.error('WS parse error:', e)
+        }
+      }
+    }
+
+    connect()
+    fetchContainers()
+
+    return () => {
+      if (wsRef.current) wsRef.current.close()
+    }
+  }, [fetchContainers])
+
+  const handleContainerAction = async (action, containerId) => {
+    setActionLoading(true)
+    try {
+      let endpoint = `${API_URL}/api/containers/${containerId}`
+      let method = 'POST'
+
+      if (action === 'delete') {
+        method = 'DELETE'
+      } else {
+        endpoint = `${endpoint}/${action}`
+      }
+
+      const res = await fetch(endpoint, { method })
+      if (res.ok) {
+        showNotification(`Container ${action}ed!`, 'success')
+      } else {
+        showNotification(`Failed to ${action} container`, 'error')
+      }
+      await fetchContainers()
+    } catch (e) {
+      console.error(`Failed to ${action} container:`, e)
+      showNotification(`Failed to ${action} container`, 'error')
+    }
+    setActionLoading(false)
+  }
+
+  const createContainer = async (config) => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/containers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      })
+      if (res.ok) {
+        showNotification('Container created!', 'success')
+      } else {
+        showNotification('Failed to create container', 'error')
+      }
+      await fetchContainers()
+    } catch (e) {
+      console.error('Failed to create container:', e)
+      showNotification('Failed to create container', 'error')
+    }
+    setLoading(false)
+  }
+
+  // Execute command in container
+  const executeCommand = async (containerId, cmdType, options) => {
+    const { duration, memorySize, customCmd } = options
+    let command = ''
+
+    switch (cmdType) {
+      case '1': // CPU Stress - TIME BASED
+        command = `echo 'Starting CPU stress for ${duration}s...'; END=$(($(date +%s) + ${duration})); i=0; while [ $(date +%s) -lt $END ]; do i=$((i+1)); done; echo 'CPU stress complete after ${duration}s'`
+        break
+      case '2': // Memory Stress
+        command = `dd if=/dev/zero of=/dev/shm/memtest bs=1M count=${memorySize} 2>/dev/null && echo 'Allocated ${memorySize}MB' && sleep ${duration} && rm -f /dev/shm/memtest && echo 'Memory released after ${duration}s'`
+        break
+      case '3': // Combined Stress - TIME BASED
+        command = `dd if=/dev/zero of=/dev/shm/memtest bs=1M count=${memorySize} 2>/dev/null; echo 'Allocated ${memorySize}MB, running CPU stress...'; END=$(($(date +%s) + ${duration})); i=0; while [ $(date +%s) -lt $END ]; do i=$((i+1)); done; rm -f /dev/shm/memtest; echo 'Combined test complete after ${duration}s'`
+        break
+      case '4': // Sleep
+        command = `echo 'Container running for ${duration}s...'; sleep ${duration}; echo 'Done after ${duration}s'`
+        break
+      case '5': // Math - TIME BASED
+        command = `echo 'Starting math calculations for ${duration}s...'; END=$(($(date +%s) + ${duration})); i=0; j=0; while [ $(date +%s) -lt $END ]; do j=$((j+i*i)); i=$((i+1)); done; echo 'Math complete after ${duration}s'`
+        break
+      case '6': // Custom
+        command = customCmd
+        break
+      default:
+        command = 'echo Hello'
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/containers/${containerId}/exec`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command })
+      })
+      if (res.ok) {
+        showNotification('Command started!', 'success')
+      } else {
+        showNotification('Failed to execute command', 'error')
+      }
+      await fetchContainers()
+    } catch (e) {
+      console.error('Failed to exec:', e)
+      showNotification('Failed to execute command', 'error')
+    }
+  }
+
+  const runningCount = containers.filter(c => c.state === 'running').length
+  const totalCpu = Object.values(metrics).reduce((sum, m) => sum + (m.cpu_percent || 0), 0)
+  const totalMem = Object.values(metrics).reduce((sum, m) => sum + (m.memory_bytes || 0), 0)
+
+  return (
+    <div className="app">
+      <header className="header">
+        <div className="logo">
+          <span className="logo-icon">🐳</span>
+          <h1>Mini<span>Container</span></h1>
+        </div>
+        <div className="header-right">
+          <div className={`ws-status ${wsStatus}`}>
+            <span className="dot"></span>
+            {wsStatus === 'connected' ? 'Live' : 'Offline'}
+          </div>
+        </div>
+      </header>
+
+      <main className="main">
+        {/* Stats Overview */}
+        <div className="stats-bar">
+          <div className="stat-card">
+            <div className="stat-icon total">📦</div>
+            <div className="stat-content">
+              <div className="stat-value">{containers.length}</div>
+              <div className="stat-label">Total Containers</div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon running">▶️</div>
+            <div className="stat-content">
+              <div className="stat-value">{runningCount}</div>
+              <div className="stat-label">Running</div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon cpu">⚡</div>
+            <div className="stat-content">
+              <div className="stat-value">{totalCpu.toFixed(1)}%</div>
+              <div className="stat-label">Total CPU</div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon mem">💾</div>
+            <div className="stat-content">
+              <div className="stat-value">{formatBytes(totalMem)}</div>
+              <div className="stat-label">Total Memory</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Live Monitoring Section for Running Containers */}
+        <RunningContainersSection
+          containers={containers}
+          metrics={metrics}
+          history={history}
+        />
+
+        {/* Action Bar */}
+        <div className="action-bar">
+          <h2>All Containers</h2>
+          <div className="action-buttons">
+            <button className="btn btn-secondary" onClick={fetchContainers}>
+              🔄 Refresh
+            </button>
+            <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+              ➕ Create Container
+            </button>
+          </div>
+        </div>
+
+        {/* Container Grid */}
+        {loading ? (
+          <div className="loading">
+            <div className="loader"></div>
+            <p>Loading containers...</p>
+          </div>
+        ) : containers.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📦</div>
+            <div className="empty-title">No Containers Yet</div>
+            <div className="empty-subtitle">Create your first container to get started</div>
+            <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+              ➕ Create Container
+            </button>
+          </div>
+        ) : (
+          <div className="containers">
+            {containers.map(container => (
+              <ContainerCard
+                key={container.id}
+                container={container}
+                metrics={metrics[container.id]}
+                history={history[container.id]}
+                onAction={handleContainerAction}
+                onMonitor={setMonitorContainer}
+                onExec={setExecContainer}
+                actionLoading={actionLoading}
+              />
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Modals */}
+      <CreateContainerModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={createContainer}
+      />
+
+      {monitorContainer && (
+        <MonitorModal
+          container={monitorContainer}
+          metrics={metrics[monitorContainer.id]}
+          history={history[monitorContainer.id]}
+          onClose={() => setMonitorContainer(null)}
+        />
+      )}
+
+      <ExecuteCommandModal
+        container={execContainer}
+        isOpen={!!execContainer}
+        onClose={() => setExecContainer(null)}
+        onExecute={executeCommand}
+      />
+
+      {/* Notification */}
+      {notification && (
+        <div className={`notification ${notification.type}`}>
+          {notification.type === 'success' ? '✓' : '✗'} {notification.message}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default App
