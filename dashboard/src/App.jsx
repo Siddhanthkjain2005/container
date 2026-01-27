@@ -523,7 +523,9 @@ function App() {
 
   const fetchContainers = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/containers`)
+      const res = await fetch(`${API_URL}/api/containers`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      })
       if (res.ok) {
         const data = await res.json()
         setContainers(data)
@@ -593,7 +595,10 @@ function App() {
         endpoint = `${endpoint}/${action}`
       }
 
-      const res = await fetch(endpoint, { method })
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      })
       if (res.ok) {
         showNotification(`Container ${action}ed!`, 'success')
       } else {
@@ -612,7 +617,10 @@ function App() {
     try {
       const res = await fetch(`${API_URL}/api/containers`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
         body: JSON.stringify(config)
       })
       if (res.ok) {
@@ -659,7 +667,10 @@ function App() {
     try {
       const res = await fetch(`${API_URL}/api/containers/${containerId}/exec`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
         body: JSON.stringify({ command })
       })
       if (res.ok) {
