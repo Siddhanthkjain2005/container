@@ -136,6 +136,22 @@ int ns_setup_uts(const char *hostname);
 int ns_setup_user(pid_t pid, uid_t uid_host, uid_t uid_container,
                   gid_t gid_host, gid_t gid_container);
 
+/**
+ * Enter an existing namespace of a process
+ * @param pid Process ID whose namespace to enter
+ * @param ns_type Namespace type (CLONE_NEWPID, CLONE_NEWNS, etc.)
+ * @return MC_OK on success, error code on failure
+ */
+int ns_enter(pid_t pid, int ns_type);
+
+/**
+ * Enter all namespaces of a process
+ * @param pid Process ID whose namespaces to enter
+ * @param flags Namespace flags to enter
+ * @return MC_OK on success, error code on failure
+ */
+int ns_enter_all(pid_t pid, int flags);
+
 /* ===== Cgroup Functions ===== */
 
 /**

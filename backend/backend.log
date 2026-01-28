@@ -1,0 +1,25 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/student/.gemini/antigravity/scratch/minicontainer/backend/minicontainer/cli.py", line 423, in <module>
+    main()
+    ~~~~^^
+  File "/home/student/.gemini/antigravity/scratch/minicontainer/backend/minicontainer/cli.py", line 420, in main
+    cli()
+    ~~~^^
+  File "/usr/lib/python3/dist-packages/click/core.py", line 1161, in __call__
+    return self.main(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/home/student/.gemini/antigravity/scratch/minicontainer/backend/minicontainer/cli.py", line 345, in dashboard
+    import uvicorn
+ModuleNotFoundError: No module named 'uvicorn'

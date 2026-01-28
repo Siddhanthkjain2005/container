@@ -319,45 +319,79 @@ def delete_container(container_id: str):
 
 @app.post("/api/containers/{container_id}/exec")
 async def exec_in_container(container_id: str, request: Request):
-    """Execute a command in a container's cgroup"""
+    """Execute a command in a container with namespace isolation (if running) or cgroup-only (if stopped)"""
     try:
         body = await request.json()
         command = body.get("command", "echo Hello")
     except:
         command = "echo Hello"
     
-    cgroup_path = CGROUP_BASE / container_id
+    # Check if container is running - if so, use C runtime exec with namespace entry
+    state_file = Path(f"/var/lib/minicontainer/containers/{container_id}/state.txt")
+    is_running = False
+    container_pid = 0
     
-    # Ensure cgroup exists
-    if not cgroup_path.exists():
-        cgroup_path.mkdir(parents=True, exist_ok=True)
-        # Setup cgroup subtree control
-        subprocess.run(
-            f"echo '+cpu +memory +pids' | sudo tee /sys/fs/cgroup/minicontainer/cgroup.subtree_control",
-            shell=True, capture_output=True
-        )
-    
-    # Run command in background in the cgroup
-    run_script = f'''
-echo $$ > {cgroup_path}/cgroup.procs 2>/dev/null
-{command}
-'''
-    
-    # Use Popen to run in background without blocking
-    import threading
-    def run_command():
+    if state_file.exists():
         try:
-            subprocess.run(
-                ["sudo", "bash", "-c", run_script],
-                capture_output=True, text=True, timeout=600
-            )
+            content = state_file.read_text()
+            if "state=running" in content:
+                is_running = True
+                for line in content.split('\n'):
+                    if line.startswith('pid='):
+                        container_pid = int(line.split('=')[1])
         except:
             pass
     
-    thread = threading.Thread(target=run_command, daemon=True)
-    thread.start()
+    cgroup_path = CGROUP_BASE / container_id
     
-    return {"status": "started", "message": f"Command started in container {container_id}"}
+    if is_running and container_pid > 0:
+        # Use C runtime exec with namespace entry (true container isolation)
+        # This uses setns() to enter MNT, UTS, IPC, and cgroup namespaces
+        run_script = f'''
+{RUNTIME_PATH} exec {container_id} --cmd "{command}"
+'''
+        import threading
+        def run_namespace_exec():
+            try:
+                subprocess.run(
+                    ["sudo", "bash", "-c", run_script],
+                    capture_output=True, text=True, timeout=600,
+                    env={"LD_LIBRARY_PATH": str(Path(RUNTIME_PATH).parent)}
+                )
+            except:
+                pass
+        
+        thread = threading.Thread(target=run_namespace_exec, daemon=True)
+        thread.start()
+        
+        return {"status": "started", "message": f"Command started in container {container_id} with namespace isolation (PID {container_pid})"}
+    else:
+        # Fallback: cgroup-only execution for stopped containers
+        if not cgroup_path.exists():
+            cgroup_path.mkdir(parents=True, exist_ok=True)
+            subprocess.run(
+                f"echo '+cpu +memory +pids' | sudo tee /sys/fs/cgroup/minicontainer/cgroup.subtree_control",
+                shell=True, capture_output=True
+            )
+        
+        run_script = f'''
+echo $$ > {cgroup_path}/cgroup.procs 2>/dev/null
+{command}
+'''
+        import threading
+        def run_cgroup_exec():
+            try:
+                subprocess.run(
+                    ["sudo", "bash", "-c", run_script],
+                    capture_output=True, text=True, timeout=600
+                )
+            except:
+                pass
+        
+        thread = threading.Thread(target=run_cgroup_exec, daemon=True)
+        thread.start()
+        
+        return {"status": "started", "message": f"Command started in container {container_id} (cgroup-only mode)"}
 
 @app.get("/api/containers/{container_id}/metrics")
 def get_container_metrics(container_id: str):

@@ -1,0 +1,24 @@
+╭─────────────────────── Dashboard ───────────────────────╮
+│ 🚀 MiniContainer Dashboard                              │
+│                                                         │
+│   API Server: http://localhost:8000                     │
+│   Dashboard:  http://localhost:5173                     │
+│                                                         │
+│   Run 'cd dashboard && npm run dev' in another terminal │
+╰─────────────────────────────────────────────────────────╯
+INFO:     Started server process [31556]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     2405:201:d013:18af:c1d3:d4bd:cd5e:e774:0 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     2405:201:d013:18af:105d:76bc:b0ec:a9c2:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     2405:201:d013:18af:c1d3:d4bd:cd5e:e774:0 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     2405:201:d013:18af:c1d3:d4bd:cd5e:e774:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [31556]

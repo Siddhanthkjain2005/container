@@ -1,0 +1,14 @@
+t=2026-01-28T00:37:45+0530 lvl=info msg="no configuration paths supplied"
+t=2026-01-28T00:37:45+0530 lvl=info msg="using configuration at default config path" path=/home/student/.config/ngrok/ngrok.yml
+t=2026-01-28T00:37:45+0530 lvl=info msg="open config file" path=/home/student/.config/ngrok/ngrok.yml err=nil
+t=2026-01-28T00:37:46+0530 lvl=info msg="FIPS 140 mode" enabled=false
+t=2026-01-28T00:37:46+0530 lvl=info msg="starting web service" obj=web addr=127.0.0.1:4040 allow_hosts=[]
+t=2026-01-28T00:37:46+0530 lvl=info msg="client session established" obj=tunnels.session
+t=2026-01-28T00:37:46+0530 lvl=info msg="tunnel session started" obj=tunnels.session
+t=2026-01-28T00:37:46+0530 lvl=info msg="started tunnel" obj=tunnels name=command_line addr=http://localhost:8000 url=https://diphyodont-zachery-multifamilial.ngrok-free.dev
+t=2026-01-28T00:37:48+0530 lvl=info msg="join connections" obj=join id=1bd7b2cf36e1 l=127.0.0.1:8000 r=[2405:201:d013:18af:c1d3:d4bd:cd5e:e774]:53523
+t=2026-01-28T00:38:02+0530 lvl=info msg="join connections" obj=join id=491e428bc1c8 l=127.0.0.1:8000 r=[2405:201:d013:18af:105d:76bc:b0ec:a9c2]:34379
+t=2026-01-28T00:38:26+0530 lvl=info msg="join connections" obj=join id=31ee4feae2fa l=127.0.0.1:8000 r=[2405:201:d013:18af:c1d3:d4bd:cd5e:e774]:53524
+t=2026-01-28T00:38:26+0530 lvl=info msg="join connections" obj=join id=698b1660f59d l=127.0.0.1:8000 r=[2405:201:d013:18af:c1d3:d4bd:cd5e:e774]:53525
+t=2026-01-28T00:38:43+0530 lvl=info msg="received stop request" obj=app stopReq="{err:<nil> restart:false}"
+t=2026-01-28T00:38:43+0530 lvl=info msg="session closing" obj=tunnels.session err=nil

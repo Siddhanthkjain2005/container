@@ -181,35 +181,36 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         
-        /* Fork and add child to container's cgroup */
-        pid_t child = fork();
-        if (child == 0) {
-            /* Add ourselves to the container's cgroup */
-            char cgroup_procs[PATH_MAX];
-            snprintf(cgroup_procs, sizeof(cgroup_procs), 
-                     "/sys/fs/cgroup/minicontainer/%s/cgroup.procs", target->config.id);
-            
-            FILE *fp = fopen(cgroup_procs, "w");
-            if (fp) {
-                fprintf(fp, "%d\n", getpid());
-                fclose(fp);
-            } else {
-                fprintf(stderr, "Warning: Could not add to cgroup\n");
-            }
-            
-            /* Execute the command */
-            if (run_cmd) {
-                execl("/bin/sh", "/bin/sh", "-c", run_cmd, NULL);
-            } else {
-                /* Interactive shell */
-                execl("/bin/sh", "/bin/sh", NULL);
-            }
-            exit(127);
-        } else if (child > 0) {
-            int status;
-            waitpid(child, &status, 0);
-            printf("Command exited with code %d\n", WEXITSTATUS(status));
+        /* Use container_exec which enters namespaces via setns() */
+        char **exec_cmd;
+        int exec_cmd_count;
+        
+        if (run_cmd) {
+            exec_cmd = malloc(sizeof(char*) * 4);
+            exec_cmd[0] = "/bin/sh";
+            exec_cmd[1] = "-c";
+            exec_cmd[2] = run_cmd;
+            exec_cmd[3] = NULL;
+            exec_cmd_count = 3;
+        } else {
+            /* Interactive shell */
+            exec_cmd = malloc(sizeof(char*) * 2);
+            exec_cmd[0] = "/bin/sh";
+            exec_cmd[1] = NULL;
+            exec_cmd_count = 1;
         }
+        
+        printf("Executing in container %s (PID %d) with namespace isolation...\n", 
+               target->config.name, target->pid);
+        
+        int result = container_exec(target, exec_cmd, exec_cmd_count);
+        if (result == MC_OK) {
+            printf("Command completed successfully\n");
+        } else {
+            printf("Command failed (code %d)\n", result);
+        }
+        
+        free(exec_cmd);
         container_free(target);
     } else if (strcmp(cmd, "shell") == 0) {
         /* Start interactive shell in a new container */

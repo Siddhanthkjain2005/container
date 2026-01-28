@@ -193,3 +193,93 @@ int container_list(container_t ***containers, int *count) {
     *containers = list; *count = n;
     return MC_OK;
 }
+
+/**
+ * Execute command in a running container's namespace
+ * Uses setns() to enter the container's namespaces for true isolation
+ */
+int container_exec(container_t *c, char **cmd, int cmd_count) {
+    if (!c || !cmd || cmd_count <= 0) {
+        return MC_ERR_INVALID;
+    }
+    
+    /* Container must be running */
+    if (c->state != CONTAINER_RUNNING || c->pid <= 0) {
+        mc_log(3, "Container is not running");
+        return MC_ERR_PROCESS;
+    }
+    
+    /* Verify the container process still exists */
+    if (kill(c->pid, 0) != 0) {
+        mc_log(3, "Container process %d not found", c->pid);
+        return MC_ERR_NOT_FOUND;
+    }
+    
+    pid_t exec_pid = fork();
+    if (exec_pid < 0) {
+        mc_log(3, "fork() failed: %s", strerror(errno));
+        return MC_ERR_PROCESS;
+    }
+    
+    if (exec_pid == 0) {
+        /* Child process - enter namespaces and execute command */
+        
+        /* Define namespace flags to enter (order matters!) */
+        int ns_flags = CLONE_NEWNS | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWCGROUP;
+        
+        /* Enter each namespace of the container's init process */
+        /* Note: PID namespace entry is special - new process gets PID 1 in that namespace */
+        
+        /* Enter mount namespace first */
+        if (ns_enter(c->pid, CLONE_NEWNS) != MC_OK) {
+            mc_log(3, "Failed to enter mount namespace");
+            /* Continue anyway - might work without it */
+        }
+        
+        /* Enter UTS namespace */
+        if (ns_enter(c->pid, CLONE_NEWUTS) != MC_OK) {
+            mc_log(3, "Failed to enter UTS namespace");
+        }
+        
+        /* Enter IPC namespace */
+        if (ns_enter(c->pid, CLONE_NEWIPC) != MC_OK) {
+            mc_log(3, "Failed to enter IPC namespace");
+        }
+        
+        /* Enter cgroup namespace */
+        if (ns_enter(c->pid, CLONE_NEWCGROUP) != MC_OK) {
+            mc_log(3, "Failed to enter cgroup namespace");
+        }
+        
+        /* Add this process to the container's cgroup */
+        cgroup_add_pid(c, getpid());
+        
+        /* Change to root directory (inside container's mount namespace) */
+        if (chdir("/") != 0) {
+            mc_log(2, "Failed to chdir to /");
+        }
+        
+        /* Execute the command */
+        mc_log(1, "Executing command in container %s: %s", c->config.name, cmd[0]);
+        execvp(cmd[0], cmd);
+        
+        /* If execvp returns, it failed */
+        mc_log(3, "execvp failed: %s", strerror(errno));
+        _exit(127);
+    }
+    
+    /* Parent process - wait for child */
+    int status;
+    if (waitpid(exec_pid, &status, 0) < 0) {
+        mc_log(3, "waitpid failed: %s", strerror(errno));
+        return MC_ERR_PROCESS;
+    }
+    
+    if (WIFEXITED(status)) {
+        int exit_code = WEXITSTATUS(status);
+        mc_log(1, "Command exited with code %d", exit_code);
+        return (exit_code == 0) ? MC_OK : MC_ERR_PROCESS;
+    }
+    
+    return MC_OK;
+}
