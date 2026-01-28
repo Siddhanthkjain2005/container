@@ -347,9 +347,10 @@ async def exec_in_container(container_id: str, request: Request):
     if is_running and container_pid > 0:
         # Use C runtime exec with namespace entry (true container isolation)
         # This uses setns() to enter MNT, UTS, IPC, and cgroup namespaces
-        run_script = f'''
-{RUNTIME_PATH} exec {container_id} --cmd "{command}"
-'''
+        # Escape single quotes in command and wrap in single quotes to preserve shell operators
+        escaped_cmd = command.replace("'", "'\"'\"'")
+        run_script = f"{RUNTIME_PATH} exec {container_id} --cmd '{escaped_cmd}'"
+        
         import threading
         def run_namespace_exec():
             try:
