@@ -37,24 +37,7 @@ cd dashboard && npm install && cd ..
 ## 🖥️ Running the CLI
 
 ```bash
-# List containers
-sudo ./runtime/build/minicontainer-runtime list
-
-# Create container
-sudo ./runtime/build/minicontainer-runtime create --name mycontainer
-
-# Start container
-sudo ./runtime/build/minicontainer-runtime start <container_id>
-
-# Stop container
-sudo ./runtime/build/minicontainer-runtime stop <container_id>
-
-# Delete container
-sudo ./runtime/build/minicontainer-runtime delete <container_id>
-
-# Execute command in container
-sudo ./runtime/build/minicontainer-runtime exec <container_id> --cmd "echo hello"
-```
+sudo python3 controller.py
 
 ---
 
@@ -104,14 +87,4 @@ Your dashboard will be live at: `https://your-project.vercel.app`
 
 ---
 
-## ✅ Quick Reference
 
-| Command | Description |
-|---------|-------------|
-| `sudo ./runtime/build/minicontainer-runtime list` | List all containers |
-| `sudo ./runtime/build/minicontainer-runtime create --name NAME` | Create container |
-| `sudo ./runtime/build/minicontainer-runtime start ID` | Start container |
-| `sudo ./runtime/build/minicontainer-runtime stop ID` | Stop container |
-| `sudo ./runtime/build/minicontainer-runtime delete ID` | Delete container |
-| `sudo PYTHONPATH=./backend ./backend/venv/bin/python3 -m minicontainer.cli dashboard` | Start backend |
-| `ngrok http 8000` | Start tunnel |
