@@ -43,7 +43,16 @@ sudo python3 controller.py
 
 ## ☁️ Vercel Deployment
 
-### Step 1: Start Backend with ngrok
+### Step 1: Configure ngrok Token
+
+```bash
+# Get token from https://dashboard.ngrok.com/get-started/your-authtoken
+ngrok config add-authtoken YOUR_TOKEN
+```
+
+Token is saved to: `~/.config/ngrok/ngrok.yml`
+
+### Step 2: Start Backend with ngrok
 
 ```bash
 # Terminal 1 - Start backend
@@ -54,15 +63,6 @@ ngrok http 8000
 ```
 
 Copy the ngrok URL (e.g., `https://abc123.ngrok-free.dev`)
-
-### Step 2: Configure ngrok Token
-
-```bash
-# Get token from https://dashboard.ngrok.com/get-started/your-authtoken
-ngrok config add-authtoken YOUR_TOKEN
-```
-
-Token is saved to: `~/.config/ngrok/ngrok.yml`
 
 ### Step 3: Update Frontend URL
 
