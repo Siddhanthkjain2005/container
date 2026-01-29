@@ -292,14 +292,41 @@ def start_container(container_id: str):
 
 @app.post("/api/containers/{container_id}/stop")
 def stop_container(container_id: str):
-    """Stop a container"""
+    """Stop a container - kill all processes in cgroup"""
     # Find container to get PID
     containers = get_running_containers()
+    target_container = None
     for c in containers:
         if c["id"] == container_id or c["id"].startswith(container_id) or c["name"] == container_id:
-            if c["pid"] > 0:
-                os.system(f"sudo kill -9 {c['pid']} 2>/dev/null")
+            target_container = c
             break
+    
+    if target_container:
+        # Kill main PID
+        if target_container["pid"] > 0:
+            os.system(f"sudo kill -9 {target_container['pid']} 2>/dev/null")
+        
+        # Kill all processes in the cgroup
+        cgroup_procs = CGROUP_BASE / container_id / "cgroup.procs"
+        if cgroup_procs.exists():
+            try:
+                pids = cgroup_procs.read_text().strip().split('\n')
+                for pid in pids:
+                    if pid.strip():
+                        os.system(f"sudo kill -9 {pid.strip()} 2>/dev/null")
+            except:
+                pass
+        
+        # Update state file to stopped
+        state_file = Path(f"/var/lib/minicontainer/containers/{container_id}/state.txt")
+        if state_file.exists():
+            try:
+                content = state_file.read_text()
+                new_content = content.replace("state=running", "state=stopped")
+                new_content = new_content.replace(f"pid={target_container['pid']}", "pid=0")
+                state_file.write_text(new_content)
+            except:
+                pass
     
     run_runtime_command(["stop", container_id])
     return {"status": "stopped"}
