@@ -243,5 +243,5 @@ class AnomalyDetector:
             "trend": "up" if slope > 0 else "down" if slope < 0 else "stable"
         }
 
-# Global detector instance
-detector = AnomalyDetector()
+# Global detector instance - lower threshold for more sensitive detection
+detector = AnomalyDetector(z_threshold=1.5, window_size=5)

@@ -141,6 +141,17 @@ async def metrics_broadcast_task():
                 cid = c["id"]
                 current_time = time.time()
                 
+                # If container is stopped, show 0 metrics
+                if c.get("state") != "running":
+                    metrics_by_id[cid] = {
+                        "cpu_percent": 0,
+                        "memory_bytes": 0,
+                        "memory_percent": 0,
+                        "memory_limit_bytes": 268435456,
+                        "pids": 0
+                    }
+                    continue
+                
                 # Get real metrics from cgroup only
                 cgroup = CGROUP_BASE / cid
                 mem = 0
@@ -191,7 +202,7 @@ async def metrics_broadcast_task():
                     "pids": pids
                 }
                 
-                # Feed metrics to ML anomaly detector
+                # Feed metrics to ML anomaly detector (only for running containers)
                 detector.add_metrics(cid, cpu_percent, mem)
             
             # Get anomalies for broadcast
