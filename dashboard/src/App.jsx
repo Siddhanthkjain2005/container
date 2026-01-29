@@ -1087,85 +1087,106 @@ function App() {
               </div>
             </div>
 
-            {/* Combined Charts Section */}
+            {/* CPU Time & Process Count Graphs */}
             <div className="analytics-section">
-              <h3>📉 Combined Resource Trends</h3>
-              <div className="combined-charts">
-                <div className="combined-chart-card">
-                  <div className="combined-chart-title">🔥 All Container CPU Usage</div>
-                  <div className="combined-chart-legend">
-                    {containers.map((c, i) => (
-                      <span key={c.id} className="legend-item" style={{ color: ['#eab308', '#22d3ee', '#a855f7', '#22c55e'][i % 4] }}>
-                        ● {c.name}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="stacked-bars">
-                    {containers.map((c, i) => {
-                      const cpuVal = metrics[c.id]?.cpu_percent || 0
-                      return (
-                        <div key={c.id} className="stacked-bar-row">
-                          <span className="bar-label">{c.name}</span>
-                          <div className="bar-track">
+              <h3>📊 Time-Series Graphs (Non-CPU/Memory)</h3>
+              <div className="graphs-grid">
+                {containers.map(container => {
+                  const m = metrics[container.id] || {}
+                  const h = history[container.id] || { cpu: [], mem: [], cpuTime: [], pids: [], health: [] }
+
+                  // Calculate CPU time history from cumulative values (convert to seconds)
+                  const cpuTimeSeconds = m.cpu_usec ? (m.cpu_usec / 1000000) : 0
+
+                  return (
+                    <div key={container.id} className="graph-card">
+                      <div className="graph-header">
+                        <span className="graph-container-name">{container.name}</span>
+                        <StatusBadge status={container.state} />
+                      </div>
+
+                      <div className="graph-metrics">
+                        {/* CPU Time Display */}
+                        <div className="metric-display cpu-time-display">
+                          <div className="metric-icon">⏱️</div>
+                          <div className="metric-info">
+                            <div className="metric-label">Total CPU Time</div>
+                            <div className="metric-value">
+                              {cpuTimeSeconds >= 3600
+                                ? `${(cpuTimeSeconds / 3600).toFixed(2)}h`
+                                : cpuTimeSeconds >= 60
+                                  ? `${(cpuTimeSeconds / 60).toFixed(2)}m`
+                                  : `${cpuTimeSeconds.toFixed(2)}s`
+                              }
+                            </div>
+                            <div className="metric-raw">({m.cpu_usec?.toLocaleString() || 0} µs)</div>
+                          </div>
+                        </div>
+
+                        {/* Process Count Display */}
+                        <div className="metric-display process-count-display">
+                          <div className="metric-icon">👥</div>
+                          <div className="metric-info">
+                            <div className="metric-label">Process Count</div>
+                            <div className="metric-value">{m.pids || 0}</div>
+                            <div className="metric-raw">active processes</div>
+                          </div>
+                        </div>
+
+                        {/* Health Score Display */}
+                        <div className="metric-display health-score-display">
+                          <div className="metric-icon">❤️</div>
+                          <div className="metric-info">
+                            <div className="metric-label">Health Score</div>
+                            <div className="metric-value" style={{ color: (healthScores[container.id] || 100) >= 80 ? 'var(--neon-green)' : 'var(--neon-orange)' }}>
+                              {(healthScores[container.id] || 100).toFixed(0)}/100
+                            </div>
+                            <div className="metric-raw">
+                              {(healthScores[container.id] || 100) >= 80 ? 'Healthy' : 'Needs attention'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Visual Bars */}
+                      <div className="graph-bars">
+                        <div className="graph-bar-row">
+                          <span className="bar-name">CPU Time</span>
+                          <div className="bar-visual">
                             <div
-                              className="bar-fill"
-                              style={{
-                                width: `${Math.min(cpuVal, 100)}%`,
-                                background: ['#eab308', '#22d3ee', '#a855f7', '#22c55e'][i % 4]
-                              }}
+                              className="bar-inner cpu-time"
+                              style={{ width: `${Math.min((cpuTimeSeconds / 3600) * 100, 100)}%` }}
                             ></div>
                           </div>
-                          <span className="bar-value">{cpuVal.toFixed(1)}%</span>
+                          <span className="bar-text">{cpuTimeSeconds.toFixed(1)}s</span>
                         </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <div className="combined-chart-card">
-                  <div className="combined-chart-title">💿 All Container Memory Usage</div>
-                  <div className="stacked-bars">
-                    {containers.map((c, i) => {
-                      const memVal = metrics[c.id]?.memory_bytes || 0
-                      const memLimit = metrics[c.id]?.memory_limit_bytes || 268435456
-                      const memPct = (memVal / memLimit) * 100
-                      return (
-                        <div key={c.id} className="stacked-bar-row">
-                          <span className="bar-label">{c.name}</span>
-                          <div className="bar-track">
+                        <div className="graph-bar-row">
+                          <span className="bar-name">Processes</span>
+                          <div className="bar-visual">
                             <div
-                              className="bar-fill"
-                              style={{
-                                width: `${Math.min(memPct, 100)}%`,
-                                background: ['#22d3ee', '#a855f7', '#22c55e', '#eab308'][i % 4]
-                              }}
+                              className="bar-inner processes"
+                              style={{ width: `${Math.min((m.pids || 0) * 10, 100)}%` }}
                             ></div>
                           </div>
-                          <span className="bar-value">{formatBytes(memVal)}</span>
+                          <span className="bar-text">{m.pids || 0}</span>
                         </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Process Count Info */}
-            <div className="analytics-section">
-              <h3>👥 Process Information</h3>
-              <div className="process-info-cards">
-                {containers.map(container => (
-                  <div key={container.id} className="process-info-card">
-                    <div className="process-info-header">
-                      <span>{container.name}</span>
-                      <span className="process-count-badge">{metrics[container.id]?.pids || 0} processes</span>
+                        <div className="graph-bar-row">
+                          <span className="bar-name">Health</span>
+                          <div className="bar-visual">
+                            <div
+                              className="bar-inner health"
+                              style={{ width: `${healthScores[container.id] || 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="bar-text">{(healthScores[container.id] || 100).toFixed(0)}%</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="process-info-details">
-                      <div>State: <StatusBadge status={container.state} /></div>
-                      <div>Init PID: <code>{metrics[container.id]?.init_pid || 'N/A'}</code></div>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
+                {containers.length === 0 && (
+                  <div className="empty-analytics">No containers available. Create one to see graphs.</div>
+                )}
               </div>
             </div>
           </div>

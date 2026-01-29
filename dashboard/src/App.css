@@ -2328,6 +2328,147 @@ body {
   border-radius: 3px;
 }
 
+/* ============== Time-Series Graphs ============== */
+.graphs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.graph-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.graph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.graph-container-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.graph-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.metric-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.metric-display .metric-icon {
+  font-size: 1.5rem;
+}
+
+.metric-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.metric-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.cpu-time-display .metric-value {
+  color: var(--neon-yellow);
+}
+
+.process-count-display .metric-value {
+  color: var(--neon-purple);
+}
+
+.health-score-display .metric-value {
+  color: var(--neon-green);
+}
+
+.metric-raw {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.graph-bars {
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.graph-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bar-name {
+  width: 70px;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.bar-visual {
+  flex: 1;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-inner {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.bar-inner.cpu-time {
+  background: linear-gradient(90deg, #eab308, #f59e0b);
+}
+
+.bar-inner.processes {
+  background: linear-gradient(90deg, #a855f7, #c084fc);
+}
+
+.bar-inner.health {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.bar-text {
+  width: 50px;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+}
+
 /* ============== Responsive ============== */
 @media (max-width: 768px) {
   .pid-banner {
