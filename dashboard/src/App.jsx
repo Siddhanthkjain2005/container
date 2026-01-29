@@ -514,6 +514,10 @@ function App() {
   const [execContainer, setExecContainer] = useState(null)
   const [notification, setNotification] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState('dashboard') // dashboard, analytics, about
+  const [healthScores, setHealthScores] = useState({})
+  const [anomalies, setAnomalies] = useState([])
+  const [analytics, setAnalytics] = useState(null)
   const wsRef = useRef(null)
 
   const showNotification = (message, type = 'success') => {
@@ -568,6 +572,14 @@ function App() {
               }
               return newHistory
             })
+
+            // Update health scores and anomalies from ML
+            if (data.health_scores) {
+              setHealthScores(data.health_scores)
+            }
+            if (data.anomalies) {
+              setAnomalies(prev => [...prev.slice(-50), ...data.anomalies])
+            }
           }
         } catch (e) {
           console.error('WS parse error:', e)
@@ -699,6 +711,29 @@ function App() {
           <span className="logo-icon">🐳</span>
           <h1>Mini<span>Container</span></h1>
         </div>
+
+        {/* Navigation Tabs */}
+        <nav className="nav-tabs">
+          <button
+            className={`nav-tab ${currentPage === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('dashboard')}
+          >
+            📊 Dashboard
+          </button>
+          <button
+            className={`nav-tab ${currentPage === 'analytics' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('analytics')}
+          >
+            🤖 ML Analytics
+          </button>
+          <button
+            className={`nav-tab ${currentPage === 'about' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('about')}
+          >
+            ℹ️ About
+          </button>
+        </nav>
+
         <div className="header-right">
           <div className={`ws-status ${wsStatus}`}>
             <span className="dot"></span>
@@ -738,59 +773,199 @@ function App() {
               <div className="stat-label">Total Memory</div>
             </div>
           </div>
-        </div>
 
-        {/* Live Monitoring Section for Running Containers */}
-        <RunningContainersSection
-          containers={containers}
-          metrics={metrics}
-          history={history}
-        />
-
-        {/* Action Bar */}
-        <div className="action-bar">
-          <h2>All Containers</h2>
-          <div className="action-buttons">
-            <button className="btn btn-secondary" onClick={fetchContainers}>
-              🔄 Refresh
-            </button>
-            <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-              ➕ Create Container
-            </button>
-          </div>
-        </div>
-
-        {/* Container Grid */}
-        {loading ? (
-          <div className="loading">
-            <div className="loader"></div>
-            <p>Loading containers...</p>
-          </div>
-        ) : containers.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">📦</div>
-            <div className="empty-title">No Containers Yet</div>
-            <div className="empty-subtitle">Create your first container to get started</div>
-            <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-              ➕ Create Container
-            </button>
-          </div>
-        ) : (
-          <div className="containers">
-            {containers.map(container => (
-              <ContainerCard
-                key={container.id}
-                container={container}
-                metrics={metrics[container.id]}
-                history={history[container.id]}
-                onAction={handleContainerAction}
-                onMonitor={setMonitorContainer}
-                onExec={setExecContainer}
-                actionLoading={actionLoading}
+          {/* Page Content */}
+          {currentPage === 'dashboard' && (
+            <>
+              {/* Live Monitoring Section for Running Containers */}
+              <RunningContainersSection
+                containers={containers}
+                metrics={metrics}
+                history={history}
               />
-            ))}
-          </div>
-        )}
+
+              {/* Action Bar */}
+              <div className="action-bar">
+                <h2>All Containers</h2>
+                <div className="action-buttons">
+                  <button className="btn btn-secondary" onClick={fetchContainers}>
+                    🔄 Refresh
+                  </button>
+                  <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+                    ➕ Create Container
+                  </button>
+                </div>
+              </div>
+
+              {/* Container Grid */}
+              {loading ? (
+                <div className="loading">
+                  <div className="loader"></div>
+                  <p>Loading containers...</p>
+                </div>
+              ) : containers.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📦</div>
+                  <div className="empty-title">No Containers Yet</div>
+                  <div className="empty-subtitle">Create your first container to get started</div>
+                  <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+                    ➕ Create Container
+                  </button>
+                </div>
+              ) : (
+                <div className="containers">
+                  {containers.map(container => (
+                    <ContainerCard
+                      key={container.id}
+                      container={container}
+                      metrics={metrics[container.id]}
+                      history={history[container.id]}
+                      onAction={handleContainerAction}
+                      onMonitor={setMonitorContainer}
+                      onExec={setExecContainer}
+                      actionLoading={actionLoading}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Analytics Page */}
+          {currentPage === 'analytics' && (
+            <div className="analytics-page">
+              <h2 className="page-title">🤖 ML Analytics & Anomaly Detection</h2>
+
+              {/* Health Scores Grid */}
+              <div className="analytics-section">
+                <h3>Container Health Scores</h3>
+                <div className="health-grid">
+                  {containers.map(container => {
+                    const score = healthScores[container.id] || 100
+                    const scoreClass = score >= 80 ? 'good' : score >= 50 ? 'warning' : 'critical'
+                    return (
+                      <div key={container.id} className={`health-card ${scoreClass}`}>
+                        <div className="health-name">{container.name}</div>
+                        <div className="health-score">{score.toFixed(0)}</div>
+                        <div className="health-label">Health Score</div>
+                        <div className={`health-bar`}>
+                          <div className="health-fill" style={{ width: `${score}%` }}></div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {containers.length === 0 && (
+                    <div className="empty-analytics">No containers to analyze</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Anomaly Log */}
+              <div className="analytics-section">
+                <h3>🚨 Detected Anomalies</h3>
+                <div className="anomaly-list">
+                  {anomalies.length === 0 ? (
+                    <div className="no-anomalies">
+                      ✅ No anomalies detected - all systems normal
+                    </div>
+                  ) : (
+                    anomalies.slice(-20).reverse().map((anomaly, i) => (
+                      <div key={i} className={`anomaly-item ${anomaly.severity}`}>
+                        <span className="anomaly-time">
+                          {new Date(anomaly.timestamp * 1000).toLocaleTimeString()}
+                        </span>
+                        <span className={`anomaly-badge ${anomaly.severity}`}>
+                          {anomaly.severity?.toUpperCase()}
+                        </span>
+                        <span className="anomaly-type">{anomaly.type}</span>
+                        <span className="anomaly-msg">{anomaly.message}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* ML Info */}
+              <div className="analytics-section">
+                <h3>📊 How It Works</h3>
+                <div className="ml-info">
+                  <div className="ml-card">
+                    <h4>Z-Score Detection</h4>
+                    <p>Uses statistical Z-score analysis to detect when CPU or memory usage deviates significantly from normal patterns.</p>
+                  </div>
+                  <div className="ml-card">
+                    <h4>Health Scoring</h4>
+                    <p>Combines resource usage, stability metrics, and recent anomalies into a 0-100 health score.</p>
+                  </div>
+                  <div className="ml-card">
+                    <h4>Trend Analysis</h4>
+                    <p>Monitors usage patterns over time to identify increasing/decreasing resource consumption trends.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* About Page */}
+          {currentPage === 'about' && (
+            <div className="about-page">
+              <h2 className="page-title">ℹ️ About MiniContainer</h2>
+
+              <div className="about-section">
+                <h3>🐳 What is MiniContainer?</h3>
+                <p>
+                  MiniContainer is a lightweight Linux container runtime built from scratch using
+                  Linux namespaces, cgroups v2, and a custom filesystem layer. It demonstrates
+                  core containerization concepts similar to Docker.
+                </p>
+              </div>
+
+              <div className="about-section">
+                <h3>🏗️ Architecture</h3>
+                <div className="arch-cards">
+                  <div className="arch-card">
+                    <h4>C Runtime</h4>
+                    <p>Low-level container operations: namespace creation, cgroup management, process isolation</p>
+                  </div>
+                  <div className="arch-card">
+                    <h4>Python Backend</h4>
+                    <p>FastAPI server with WebSocket support for real-time metrics and container management</p>
+                  </div>
+                  <div className="arch-card">
+                    <h4>React Dashboard</h4>
+                    <p>Modern UI with live monitoring, container management, and ML analytics</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="about-section">
+                <h3>🔧 Key Technologies</h3>
+                <div className="tech-grid">
+                  <span className="tech-tag">Linux Namespaces</span>
+                  <span className="tech-tag">Cgroups v2</span>
+                  <span className="tech-tag">setns()</span>
+                  <span className="tech-tag">FastAPI</span>
+                  <span className="tech-tag">WebSocket</span>
+                  <span className="tech-tag">React</span>
+                  <span className="tech-tag">Z-Score ML</span>
+                  <span className="tech-tag">Alpine Linux</span>
+                </div>
+              </div>
+
+              <div className="about-section">
+                <h3>📈 Features</h3>
+                <ul className="feature-list">
+                  <li>✅ Create, start, stop, and delete containers</li>
+                  <li>✅ Real-time CPU, memory, and process monitoring</li>
+                  <li>✅ Execute commands inside containers with namespace isolation</li>
+                  <li>✅ ML-based anomaly detection and health scoring</li>
+                  <li>✅ Resource limits (CPU, memory, PIDs)</li>
+                  <li>✅ Live WebSocket updates</li>
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Modals */}

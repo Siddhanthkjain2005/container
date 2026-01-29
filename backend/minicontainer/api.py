@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 
 from .wrapper import manager, Container
 from .metrics import collector
+from .ml import detector
 
 # Pydantic models
 class ContainerCreate(BaseModel):
@@ -189,12 +190,20 @@ async def metrics_broadcast_task():
                     "memory_limit_bytes": mem_limit,
                     "pids": pids
                 }
+                
+                # Feed metrics to ML anomaly detector
+                detector.add_metrics(cid, cpu_percent, mem)
+            
+            # Get anomalies for broadcast
+            all_analytics = detector.get_all_analytics()
             
             payload = {
                 "type": "metrics",
                 "timestamp": time.time(),
                 "containers": containers,
-                "metrics": metrics_by_id
+                "metrics": metrics_by_id,
+                "anomalies": all_analytics.get("global_anomalies", [])[-5:],
+                "health_scores": {cid: detector.get_container_analytics(cid).get("health_score", 100) for cid in metrics_by_id}
             }
             await ws_manager.broadcast(payload)
         await asyncio.sleep(1)
@@ -454,3 +463,29 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_json({"type": "pong"})
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
+
+# ============== ML Analytics Endpoints ==============
+
+@app.get("/api/analytics")
+def get_all_analytics():
+    """Get ML analytics for all containers"""
+    return detector.get_all_analytics()
+
+@app.get("/api/analytics/{container_id}")
+def get_container_analytics(container_id: str):
+    """Get ML analytics for a specific container"""
+    return detector.get_container_analytics(container_id)
+
+@app.get("/api/analytics/{container_id}/predict")
+def predict_container_usage(container_id: str, minutes: int = 5):
+    """Predict future resource usage using ML"""
+    return detector.predict_usage(container_id, minutes)
+
+@app.get("/api/anomalies")
+def get_anomalies():
+    """Get all detected anomalies"""
+    analytics = detector.get_all_analytics()
+    return {
+        "anomalies": analytics.get("global_anomalies", []),
+        "total": analytics.get("total_anomalies", 0)
+    }
