@@ -203,7 +203,7 @@ async def metrics_broadcast_task():
                 }
                 
                 # Feed metrics to ML anomaly detector (only for running containers)
-                detector.add_metrics(cid, cpu_percent, mem)
+                detector.add_metrics(cid, cpu_percent, mem, mem_limit)
             
             # Get anomalies for broadcast
             all_analytics = detector.get_all_analytics()
