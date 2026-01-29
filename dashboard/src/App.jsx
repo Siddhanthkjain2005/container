@@ -1038,6 +1038,19 @@ function App() {
                           <span className="stat-val">{m.init_pid || 'N/A'}</span>
                         </div>
                         <div className="detail-stat">
+                          <span className="stat-icon">⏱️</span>
+                          <span className="stat-key">CPU Time (Total)</span>
+                          <span className="stat-val cpu-time">
+                            {m.cpu_usec ? (
+                              m.cpu_usec >= 1000000
+                                ? `${(m.cpu_usec / 1000000).toFixed(2)}s`
+                                : m.cpu_usec >= 1000
+                                  ? `${(m.cpu_usec / 1000).toFixed(2)}ms`
+                                  : `${m.cpu_usec}µs`
+                            ) : '0µs'}
+                          </span>
+                        </div>
+                        <div className="detail-stat">
                           <span className="stat-icon">⚡</span>
                           <span className="stat-key">CPU Usage</span>
                           <span className="stat-val">{(m.cpu_percent || 0).toFixed(1)}%</span>
@@ -1058,36 +1071,11 @@ function App() {
                           <span className="stat-val">{m.pids || 0}</span>
                         </div>
                         <div className="detail-stat">
-                          <span className="stat-icon">📈</span>
-                          <span className="stat-key">Data Samples</span>
-                          <span className="stat-val">{totalPids}</span>
-                        </div>
-                        <div className="detail-stat">
                           <span className="stat-icon">❤️</span>
                           <span className="stat-key">Health Score</span>
                           <span className="stat-val" style={{ color: (healthScores[container.id] || 100) >= 80 ? 'var(--neon-green)' : 'var(--neon-orange)' }}>
                             {(healthScores[container.id] || 100).toFixed(0)}/100
                           </span>
-                        </div>
-                      </div>
-
-                      {/* Mini Charts */}
-                      <div className="detail-charts">
-                        <div className="mini-chart-box">
-                          <div className="mini-chart-title">CPU Over Time</div>
-                          {h.cpu.length > 1 ? (
-                            <LiveChart data={h.cpu} color="#eab308" label="CPU" />
-                          ) : (
-                            <div className="no-chart-data">Waiting for data...</div>
-                          )}
-                        </div>
-                        <div className="mini-chart-box">
-                          <div className="mini-chart-title">Memory Over Time</div>
-                          {h.mem.length > 1 ? (
-                            <LiveChart data={h.mem.map(b => b / (1024 * 1024))} color="#22d3ee" label="MB" />
-                          ) : (
-                            <div className="no-chart-data">Waiting for data...</div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -1219,49 +1207,6 @@ function App() {
                 })}
                 {containers.length === 0 && (
                   <div className="empty-analytics">No containers to analyze</div>
-                )}
-              </div>
-            </div>
-
-            {/* Resource Usage Graphs */}
-            <div className="analytics-section">
-              <h3>📈 Resource Usage Over Time</h3>
-              <div className="resource-graphs-grid">
-                {containers.map(container => {
-                  const h = history[container.id] || { cpu: [], mem: [] }
-                  return (
-                    <div key={container.id} className="resource-graph-card">
-                      <div className="resource-graph-header">
-                        <span className="resource-container-name">{container.name}</span>
-                        <StatusBadge status={container.state} />
-                      </div>
-                      <div className="resource-charts">
-                        <div className="mini-chart-container">
-                          <div className="mini-chart-label">CPU %</div>
-                          {h.cpu.length > 1 ? (
-                            <LiveChart data={h.cpu} color="#eab308" label="CPU" />
-                          ) : (
-                            <div className="no-data">No data yet</div>
-                          )}
-                        </div>
-                        <div className="mini-chart-container">
-                          <div className="mini-chart-label">Memory (MB)</div>
-                          {h.mem.length > 1 ? (
-                            <LiveChart data={h.mem.map(b => b / (1024 * 1024))} color="#22d3ee" label="Mem" />
-                          ) : (
-                            <div className="no-data">No data yet</div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="resource-current">
-                        <span>Current: {(metrics[container.id]?.cpu_percent || 0).toFixed(1)}% CPU</span>
-                        <span>{formatBytes(metrics[container.id]?.memory_bytes || 0)} RAM</span>
-                      </div>
-                    </div>
-                  )
-                })}
-                {containers.length === 0 && (
-                  <div className="empty-analytics">No containers to display graphs for</div>
                 )}
               </div>
             </div>

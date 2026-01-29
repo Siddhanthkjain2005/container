@@ -200,6 +200,7 @@ async def metrics_broadcast_task():
                 # Real metrics only - no simulation
                 metrics_by_id[cid] = {
                     "cpu_percent": cpu_percent,
+                    "cpu_usec": cpu_usec,  # Total CPU time in microseconds
                     "memory_bytes": mem,
                     "memory_percent": (mem / mem_limit * 100) if mem_limit > 0 else 0,
                     "memory_limit_bytes": mem_limit,
