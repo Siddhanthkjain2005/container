@@ -233,7 +233,7 @@ function MonitorModal({ container, metrics, history, onClose }) {
     setLoadingProcesses(true)
     setShowProcesses(true)
     try {
-      const res = await fetch(`${API_URL}/containers/${container.id}/processes`)
+      const res = await fetch(`${API_URL}/api/containers/${container.id}/processes`)
       const data = await res.json()
       setProcesses(data.processes || [])
     } catch (e) {
