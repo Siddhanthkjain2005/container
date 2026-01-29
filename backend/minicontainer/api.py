@@ -142,14 +142,27 @@ async def metrics_broadcast_task():
                 cid = c["id"]
                 current_time = time.time()
                 
-                # If container is stopped, show 0 metrics
+                # If container is stopped, still read cpu_usec from cgroup (it persists)
                 if c.get("state") != "running":
+                    cgroup = CGROUP_BASE / cid
+                    cpu_usec = 0
+                    # Read CPU time even for stopped containers
+                    if cgroup.exists():
+                        try:
+                            for line in (cgroup / "cpu.stat").read_text().splitlines():
+                                if line.startswith("usage_usec"):
+                                    cpu_usec = int(line.split()[1])
+                                    break
+                        except:
+                            pass
                     metrics_by_id[cid] = {
                         "cpu_percent": 0,
+                        "cpu_usec": cpu_usec,  # Include CPU time even when stopped
                         "memory_bytes": 0,
                         "memory_percent": 0,
                         "memory_limit_bytes": 268435456,
-                        "pids": 0
+                        "pids": 0,
+                        "init_pid": 0
                     }
                     continue
                 
