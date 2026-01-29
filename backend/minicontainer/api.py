@@ -292,16 +292,33 @@ def start_container(container_id: str):
 
 @app.post("/api/containers/{container_id}/stop")
 def stop_container(container_id: str):
-    """Stop a container"""
-    # Find container to get PID
+    """Stop a container and all its processes"""
+    print(f"DEBUG: Stop request for {container_id}")
+    
+    # 1. Kill all processes in the cgroup first (brute force)
+    cgroup_procs = CGROUP_BASE / container_id / "cgroup.procs"
+    if cgroup_procs.exists():
+        try:
+            procs = cgroup_procs.read_text().split()
+            for pid_str in procs:
+                print(f"DEBUG: Killing process {pid_str} in cgroup")
+                os.system(f"sudo kill -9 {pid_str} 2>/dev/null")
+        except Exception as e:
+            print(f"DEBUG: Error killing cgroup procs: {e}")
+
+    # 2. Also kill PID from state file if missed
     containers = get_running_containers()
     for c in containers:
         if c["id"] == container_id or c["id"].startswith(container_id) or c["name"] == container_id:
             if c["pid"] > 0:
+                print(f"DEBUG: Killing init PID {c['pid']}")
                 os.system(f"sudo kill -9 {c['pid']} 2>/dev/null")
             break
+            
+    # 3. Call runtime stop to cleanup state and cgroups
+    code, stdout, stderr = run_runtime_command(["stop", container_id])
+    print(f"DEBUG: Runtime stop result: code={code}, stdout={stdout}, stderr={stderr}")
     
-    run_runtime_command(["stop", container_id])
     return {"status": "stopped"}
 
 @app.delete("/api/containers/{container_id}")

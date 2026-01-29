@@ -1,14 +1,20 @@
-t=2026-01-28T00:37:45+0530 lvl=info msg="no configuration paths supplied"
-t=2026-01-28T00:37:45+0530 lvl=info msg="using configuration at default config path" path=/home/student/.config/ngrok/ngrok.yml
-t=2026-01-28T00:37:45+0530 lvl=info msg="open config file" path=/home/student/.config/ngrok/ngrok.yml err=nil
-t=2026-01-28T00:37:46+0530 lvl=info msg="FIPS 140 mode" enabled=false
-t=2026-01-28T00:37:46+0530 lvl=info msg="starting web service" obj=web addr=127.0.0.1:4040 allow_hosts=[]
-t=2026-01-28T00:37:46+0530 lvl=info msg="client session established" obj=tunnels.session
-t=2026-01-28T00:37:46+0530 lvl=info msg="tunnel session started" obj=tunnels.session
-t=2026-01-28T00:37:46+0530 lvl=info msg="started tunnel" obj=tunnels name=command_line addr=http://localhost:8000 url=https://diphyodont-zachery-multifamilial.ngrok-free.dev
-t=2026-01-28T00:37:48+0530 lvl=info msg="join connections" obj=join id=1bd7b2cf36e1 l=127.0.0.1:8000 r=[2405:201:d013:18af:c1d3:d4bd:cd5e:e774]:53523
-t=2026-01-28T00:38:02+0530 lvl=info msg="join connections" obj=join id=491e428bc1c8 l=127.0.0.1:8000 r=[2405:201:d013:18af:105d:76bc:b0ec:a9c2]:34379
-t=2026-01-28T00:38:26+0530 lvl=info msg="join connections" obj=join id=31ee4feae2fa l=127.0.0.1:8000 r=[2405:201:d013:18af:c1d3:d4bd:cd5e:e774]:53524
-t=2026-01-28T00:38:26+0530 lvl=info msg="join connections" obj=join id=698b1660f59d l=127.0.0.1:8000 r=[2405:201:d013:18af:c1d3:d4bd:cd5e:e774]:53525
-t=2026-01-28T00:38:43+0530 lvl=info msg="received stop request" obj=app stopReq="{err:<nil> restart:false}"
-t=2026-01-28T00:38:43+0530 lvl=info msg="session closing" obj=tunnels.session err=nil
+t=2026-01-29T11:19:59+0530 lvl=info msg="no configuration paths supplied"
+t=2026-01-29T11:19:59+0530 lvl=info msg="using configuration at default config path" path=/home/student/.config/ngrok/ngrok.yml
+t=2026-01-29T11:19:59+0530 lvl=info msg="open config file" path=/home/student/.config/ngrok/ngrok.yml err=nil
+t=2026-01-29T11:19:59+0530 lvl=info msg="FIPS 140 mode" enabled=false
+t=2026-01-29T11:19:59+0530 lvl=info msg="starting web service" obj=web addr=127.0.0.1:4040 allow_hosts=[]
+t=2026-01-29T11:20:00+0530 lvl=info msg="client session established" obj=tunnels.session
+t=2026-01-29T11:20:00+0530 lvl=info msg="tunnel session started" obj=tunnels.session
+t=2026-01-29T11:20:01+0530 lvl=info msg="started tunnel" obj=tunnels name=command_line addr=http://localhost:8000 url=https://diphyodont-zachery-multifamilial.ngrok-free.dev
+t=2026-01-29T11:20:05+0530 lvl=info msg="join connections" obj=join id=f9868c5720f1 l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:c55d:e4a6:b5ee:7855]:49451
+t=2026-01-29T11:20:13+0530 lvl=info msg="join connections" obj=join id=0d5d94d2f921 l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:35:a301:dbdd:ebfb]:45372
+t=2026-01-29T11:20:22+0530 lvl=info msg="join connections" obj=join id=173b90765371 l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:35:a301:dbdd:ebfb]:47428
+t=2026-01-29T11:20:22+0530 lvl=info msg="join connections" obj=join id=fcf543fc129f l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:35:a301:dbdd:ebfb]:35620
+t=2026-01-29T11:20:24+0530 lvl=info msg="join connections" obj=join id=eb14a6f4b142 l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:35:a301:dbdd:ebfb]:47136
+t=2026-01-29T11:20:32+0530 lvl=info msg="join connections" obj=join id=ac5274399d09 l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:35:a301:dbdd:ebfb]:33793
+t=2026-01-29T11:20:34+0530 lvl=info msg="join connections" obj=join id=757262d3223a l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:35:a301:dbdd:ebfb]:47395
+t=2026-01-29T11:23:09+0530 lvl=info msg="join connections" obj=join id=3db3b7bb0034 l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:c55d:e4a6:b5ee:7855]:49461
+t=2026-01-29T11:23:09+0530 lvl=info msg="join connections" obj=join id=e890a5a44ea5 l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:c55d:e4a6:b5ee:7855]:49462
+t=2026-01-29T11:23:17+0530 lvl=info msg="join connections" obj=join id=77419e10a428 l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:c55d:e4a6:b5ee:7855]:49463
+t=2026-01-29T11:23:24+0530 lvl=info msg="join connections" obj=join id=833b1229b353 l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:35:a301:dbdd:ebfb]:35885
+t=2026-01-29T11:24:07+0530 lvl=info msg="join connections" obj=join id=956fe08867bb l=127.0.0.1:8000 r=[2401:4900:63e7:1c9b:c55d:e4a6:b5ee:7855]:49464
