@@ -323,7 +323,18 @@ function MonitorModal({ container, metrics, history, onClose }) {
               {loadingProcesses ? (
                 <div className="process-loading">Loading processes...</div>
               ) : processes.length === 0 ? (
-                <div className="process-empty">No processes found (container may be stopped)</div>
+                <div className="process-empty">
+                  <div className="empty-icon">📭</div>
+                  <div className="empty-title">No Running Processes</div>
+                  <div className="empty-desc">
+                    Container is stopped or idle. To see processes:
+                    <ol>
+                      <li>Click "▶ Start" on the container card</li>
+                      <li>Choose a command (CPU Stress, Sleep, etc.)</li>
+                      <li>Come back here to see running processes</li>
+                    </ol>
+                  </div>
+                </div>
               ) : (
                 <div className="process-table-wrapper">
                   <table className="process-table">
