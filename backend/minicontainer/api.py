@@ -292,33 +292,16 @@ def start_container(container_id: str):
 
 @app.post("/api/containers/{container_id}/stop")
 def stop_container(container_id: str):
-    """Stop a container and all its processes"""
-    print(f"DEBUG: Stop request for {container_id}")
-    
-    # 1. Kill all processes in the cgroup first (brute force)
-    cgroup_procs = CGROUP_BASE / container_id / "cgroup.procs"
-    if cgroup_procs.exists():
-        try:
-            procs = cgroup_procs.read_text().split()
-            for pid_str in procs:
-                print(f"DEBUG: Killing process {pid_str} in cgroup")
-                os.system(f"sudo kill -9 {pid_str} 2>/dev/null")
-        except Exception as e:
-            print(f"DEBUG: Error killing cgroup procs: {e}")
-
-    # 2. Also kill PID from state file if missed
+    """Stop a container"""
+    # Find container to get PID
     containers = get_running_containers()
     for c in containers:
         if c["id"] == container_id or c["id"].startswith(container_id) or c["name"] == container_id:
             if c["pid"] > 0:
-                print(f"DEBUG: Killing init PID {c['pid']}")
                 os.system(f"sudo kill -9 {c['pid']} 2>/dev/null")
             break
-            
-    # 3. Call runtime stop to cleanup state and cgroups
-    code, stdout, stderr = run_runtime_command(["stop", container_id])
-    print(f"DEBUG: Runtime stop result: code={code}, stdout={stdout}, stderr={stderr}")
     
+    run_runtime_command(["stop", container_id])
     return {"status": "stopped"}
 
 @app.delete("/api/containers/{container_id}")
@@ -364,10 +347,9 @@ async def exec_in_container(container_id: str, request: Request):
     if is_running and container_pid > 0:
         # Use C runtime exec with namespace entry (true container isolation)
         # This uses setns() to enter MNT, UTS, IPC, and cgroup namespaces
-        # Escape single quotes in command and wrap in single quotes to preserve shell operators
-        escaped_cmd = command.replace("'", "'\"'\"'")
-        run_script = f"{RUNTIME_PATH} exec {container_id} --cmd '{escaped_cmd}'"
-        
+        run_script = f'''
+{RUNTIME_PATH} exec {container_id} --cmd "{command}"
+'''
         import threading
         def run_namespace_exec():
             try:
