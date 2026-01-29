@@ -233,11 +233,23 @@ function MonitorModal({ container, metrics, history, onClose }) {
     setLoadingProcesses(true)
     setShowProcesses(true)
     try {
-      const res = await fetch(`${API_URL}/api/containers/${container.id}/processes`)
+      const res = await fetch(`${API_URL}/api/containers/${container.id}/processes`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+          'Accept': 'application/json'
+        }
+      })
+      if (!res.ok) {
+        console.error('Process fetch failed:', res.status, res.statusText)
+        setProcesses([])
+        return
+      }
       const data = await res.json()
+      console.log('Fetched processes:', data)
       setProcesses(data.processes || [])
     } catch (e) {
       console.error('Failed to fetch processes:', e)
+      setProcesses([])
     }
     setLoadingProcesses(false)
   }
