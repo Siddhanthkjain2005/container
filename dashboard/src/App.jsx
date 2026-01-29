@@ -207,8 +207,8 @@ function ContainerCard({ container, metrics, onAction, actionLoading, onMonitor,
         <button
           className="btn btn-delete btn-icon"
           onClick={() => onAction('delete', container.id)}
-          disabled={actionLoading || container.state === 'running'}
-          title={container.state === 'running' ? 'Stop first' : 'Delete'}
+          disabled={actionLoading}
+          title="Delete container"
         >
           🗑
         </button>
@@ -597,7 +597,10 @@ function App() {
 
       const res = await fetch(endpoint, {
         method,
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        }
       })
       if (res.ok) {
         showNotification(`Container ${action}ed!`, 'success')
