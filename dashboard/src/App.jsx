@@ -966,42 +966,38 @@ function App() {
             </div>
           </div>
         )}
+      </main>
+
+      {/* Modals */}
+      <CreateContainerModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={createContainer}
+      />
+
+      {monitorContainer && (
+        <MonitorModal
+          container={monitorContainer}
+          metrics={metrics[monitorContainer.id]}
+          history={history[monitorContainer.id]}
+          onClose={() => setMonitorContainer(null)}
+        />
+      )}
+
+      <ExecuteCommandModal
+        container={execContainer}
+        isOpen={!!execContainer}
+        onClose={() => setExecContainer(null)}
+        onExecute={executeCommand}
+      />
+
+      {/* Notification */}
+      {notification && (
+        <div className={`notification ${notification.type}`}>
+          {notification.type === 'success' ? '✓' : '✗'} {notification.message}
+        </div>
+      )}
     </div>
-      </main >
-
-    {/* Modals */ }
-    < CreateContainerModal
-  isOpen = { showCreateModal }
-  onClose = {() => setShowCreateModal(false)
-}
-onCreate = { createContainer }
-  />
-
-  { monitorContainer && (
-    <MonitorModal
-      container={monitorContainer}
-      metrics={metrics[monitorContainer.id]}
-      history={history[monitorContainer.id]}
-      onClose={() => setMonitorContainer(null)}
-    />
-  )}
-
-<ExecuteCommandModal
-  container={execContainer}
-  isOpen={!!execContainer}
-  onClose={() => setExecContainer(null)}
-  onExecute={executeCommand}
-/>
-
-{/* Notification */ }
-{
-  notification && (
-    <div className={`notification ${notification.type}`}>
-      {notification.type === 'success' ? '✓' : '✗'} {notification.message}
-    </div>
-  )
-}
-    </div >
   )
 }
 
