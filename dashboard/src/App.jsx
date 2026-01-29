@@ -850,6 +850,12 @@ function App() {
             📊 Dashboard
           </button>
           <button
+            className={`nav-tab ${currentPage === 'stats' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('stats')}
+          >
+            📈 Stats
+          </button>
+          <button
             className={`nav-tab ${currentPage === 'analytics' ? 'active' : ''}`}
             onClick={() => setCurrentPage('analytics')}
           >
@@ -959,6 +965,222 @@ function App() {
               </div>
             )}
           </>
+        )}
+
+        {/* Stats Page - New Analytics with CPU Time and Graphs */}
+        {currentPage === 'stats' && (
+          <div className="stats-page">
+            <div className="analytics-header">
+              <h2 className="page-title">📈 Container Statistics & Graphs</h2>
+              <a
+                className="btn btn-secondary export-btn"
+                href={`${API_URL}/api/export/csv`}
+                download="minicontainer_metrics.csv"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                📥 Export CSV
+              </a>
+            </div>
+
+            {/* Overview Stats */}
+            <div className="analytics-section">
+              <h3>📊 System Overview</h3>
+              <div className="stats-overview-grid">
+                <div className="overview-card">
+                  <div className="overview-icon">📦</div>
+                  <div className="overview-value">{containers.length}</div>
+                  <div className="overview-label">Total Containers</div>
+                </div>
+                <div className="overview-card">
+                  <div className="overview-icon">▶️</div>
+                  <div className="overview-value">{containers.filter(c => c.state === 'running').length}</div>
+                  <div className="overview-label">Running</div>
+                </div>
+                <div className="overview-card">
+                  <div className="overview-icon">⚡</div>
+                  <div className="overview-value">{totalCpu.toFixed(1)}%</div>
+                  <div className="overview-label">Total CPU Usage</div>
+                </div>
+                <div className="overview-card">
+                  <div className="overview-icon">💾</div>
+                  <div className="overview-value">{formatBytes(totalMem)}</div>
+                  <div className="overview-label">Total Memory Used</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Per-Container Detailed Stats */}
+            <div className="analytics-section">
+              <h3>🔬 Container Details with CPU Time</h3>
+              <div className="container-details-grid">
+                {containers.map(container => {
+                  const m = metrics[container.id] || {}
+                  const h = history[container.id] || { cpu: [], mem: [] }
+                  const totalPids = h.cpu.length // Use as proxy for data samples
+
+                  return (
+                    <div key={container.id} className="container-detail-card">
+                      <div className="detail-header">
+                        <span className="detail-name">{container.name}</span>
+                        <StatusBadge status={container.state} />
+                      </div>
+
+                      <div className="detail-stats">
+                        <div className="detail-stat">
+                          <span className="stat-icon">🆔</span>
+                          <span className="stat-key">Container ID</span>
+                          <span className="stat-val">{container.id}</span>
+                        </div>
+                        <div className="detail-stat">
+                          <span className="stat-icon">🔢</span>
+                          <span className="stat-key">Init PID</span>
+                          <span className="stat-val">{m.init_pid || 'N/A'}</span>
+                        </div>
+                        <div className="detail-stat">
+                          <span className="stat-icon">⚡</span>
+                          <span className="stat-key">CPU Usage</span>
+                          <span className="stat-val">{(m.cpu_percent || 0).toFixed(1)}%</span>
+                        </div>
+                        <div className="detail-stat">
+                          <span className="stat-icon">💾</span>
+                          <span className="stat-key">Memory Used</span>
+                          <span className="stat-val">{formatBytes(m.memory_bytes || 0)}</span>
+                        </div>
+                        <div className="detail-stat">
+                          <span className="stat-icon">📊</span>
+                          <span className="stat-key">Memory Limit</span>
+                          <span className="stat-val">{formatBytes(m.memory_limit_bytes || 0)}</span>
+                        </div>
+                        <div className="detail-stat">
+                          <span className="stat-icon">👥</span>
+                          <span className="stat-key">Process Count</span>
+                          <span className="stat-val">{m.pids || 0}</span>
+                        </div>
+                        <div className="detail-stat">
+                          <span className="stat-icon">📈</span>
+                          <span className="stat-key">Data Samples</span>
+                          <span className="stat-val">{totalPids}</span>
+                        </div>
+                        <div className="detail-stat">
+                          <span className="stat-icon">❤️</span>
+                          <span className="stat-key">Health Score</span>
+                          <span className="stat-val" style={{ color: (healthScores[container.id] || 100) >= 80 ? 'var(--neon-green)' : 'var(--neon-orange)' }}>
+                            {(healthScores[container.id] || 100).toFixed(0)}/100
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Mini Charts */}
+                      <div className="detail-charts">
+                        <div className="mini-chart-box">
+                          <div className="mini-chart-title">CPU Over Time</div>
+                          {h.cpu.length > 1 ? (
+                            <LiveChart data={h.cpu} color="#eab308" label="CPU" />
+                          ) : (
+                            <div className="no-chart-data">Waiting for data...</div>
+                          )}
+                        </div>
+                        <div className="mini-chart-box">
+                          <div className="mini-chart-title">Memory Over Time</div>
+                          {h.mem.length > 1 ? (
+                            <LiveChart data={h.mem.map(b => b / (1024 * 1024))} color="#22d3ee" label="MB" />
+                          ) : (
+                            <div className="no-chart-data">Waiting for data...</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                {containers.length === 0 && (
+                  <div className="empty-analytics">No containers available. Create one to see stats.</div>
+                )}
+              </div>
+            </div>
+
+            {/* Combined Charts Section */}
+            <div className="analytics-section">
+              <h3>📉 Combined Resource Trends</h3>
+              <div className="combined-charts">
+                <div className="combined-chart-card">
+                  <div className="combined-chart-title">🔥 All Container CPU Usage</div>
+                  <div className="combined-chart-legend">
+                    {containers.map((c, i) => (
+                      <span key={c.id} className="legend-item" style={{ color: ['#eab308', '#22d3ee', '#a855f7', '#22c55e'][i % 4] }}>
+                        ● {c.name}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="stacked-bars">
+                    {containers.map((c, i) => {
+                      const cpuVal = metrics[c.id]?.cpu_percent || 0
+                      return (
+                        <div key={c.id} className="stacked-bar-row">
+                          <span className="bar-label">{c.name}</span>
+                          <div className="bar-track">
+                            <div
+                              className="bar-fill"
+                              style={{
+                                width: `${Math.min(cpuVal, 100)}%`,
+                                background: ['#eab308', '#22d3ee', '#a855f7', '#22c55e'][i % 4]
+                              }}
+                            ></div>
+                          </div>
+                          <span className="bar-value">{cpuVal.toFixed(1)}%</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="combined-chart-card">
+                  <div className="combined-chart-title">💿 All Container Memory Usage</div>
+                  <div className="stacked-bars">
+                    {containers.map((c, i) => {
+                      const memVal = metrics[c.id]?.memory_bytes || 0
+                      const memLimit = metrics[c.id]?.memory_limit_bytes || 268435456
+                      const memPct = (memVal / memLimit) * 100
+                      return (
+                        <div key={c.id} className="stacked-bar-row">
+                          <span className="bar-label">{c.name}</span>
+                          <div className="bar-track">
+                            <div
+                              className="bar-fill"
+                              style={{
+                                width: `${Math.min(memPct, 100)}%`,
+                                background: ['#22d3ee', '#a855f7', '#22c55e', '#eab308'][i % 4]
+                              }}
+                            ></div>
+                          </div>
+                          <span className="bar-value">{formatBytes(memVal)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Process Count Info */}
+            <div className="analytics-section">
+              <h3>👥 Process Information</h3>
+              <div className="process-info-cards">
+                {containers.map(container => (
+                  <div key={container.id} className="process-info-card">
+                    <div className="process-info-header">
+                      <span>{container.name}</span>
+                      <span className="process-count-badge">{metrics[container.id]?.pids || 0} processes</span>
+                    </div>
+                    <div className="process-info-details">
+                      <div>State: <StatusBadge status={container.state} /></div>
+                      <div>Init PID: <code>{metrics[container.id]?.init_pid || 'N/A'}</code></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Analytics Page */}
