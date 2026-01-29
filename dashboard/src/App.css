@@ -1843,6 +1843,13 @@ body {
   white-space: nowrap;
 }
 
+.process-table .desc-col {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  max-width: 250px;
+  font-style: italic;
+}
+
 .state-badge {
   padding: 0.15rem 0.4rem;
   border-radius: 4px;

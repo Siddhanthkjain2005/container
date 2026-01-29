@@ -334,7 +334,7 @@ function MonitorModal({ container, metrics, history, onClose }) {
                         <th>Name</th>
                         <th>State</th>
                         <th>Memory</th>
-                        <th>Command</th>
+                        <th>Description</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -347,7 +347,7 @@ function MonitorModal({ container, metrics, history, onClose }) {
                             <span className={`state-badge ${p.state_code}`}>{p.state}</span>
                           </td>
                           <td className="mem-col">{p.memory_human}</td>
-                          <td className="cmd-col" title={p.command}>{p.command.slice(0, 40)}</td>
+                          <td className="desc-col" title={p.command}>{p.description || 'User process'}</td>
                         </tr>
                       ))}
                     </tbody>

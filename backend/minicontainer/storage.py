@@ -168,7 +168,67 @@ class ProcessInspector:
     - We can see all container processes by looking at /proc on the host
     """
     
-    CGROUP_BASE = Path("/sys/fs/cgroup")
+    # Correct path: /sys/fs/cgroup/minicontainer/{container_id}/
+    CGROUP_BASE = Path("/sys/fs/cgroup/minicontainer")
+    
+    # Process descriptions for common commands
+    PROCESS_DESCRIPTIONS = {
+        # Shells
+        "sh": "Bourne shell - lightweight command interpreter",
+        "bash": "GNU Bourne Again Shell - enhanced command interpreter",
+        "ash": "Almquist shell - lightweight POSIX shell (Alpine default)",
+        "zsh": "Z shell - extended Bourne shell with many improvements",
+        
+        # Init/System
+        "init": "Init process (PID 1) - first process in container",
+        "sleep": "Sleep command - pauses for specified duration",
+        "cat": "Concatenate and display file contents",
+        "tail": "Display the last lines of a file/stream",
+        "head": "Display the first lines of a file/stream",
+        
+        # Stress/Load
+        "stress": "Stress test tool - generates CPU/memory/IO load",
+        "dd": "Data duplicator - copies/converts data between files",
+        "yes": "Repeatedly outputs a string - used for stress testing",
+        
+        # File operations
+        "ls": "List directory contents",
+        "cp": "Copy files and directories",
+        "mv": "Move/rename files and directories",
+        "rm": "Remove files and directories",
+        "find": "Search for files in directory hierarchy",
+        "grep": "Search for patterns in files",
+        
+        # Process management
+        "ps": "Report process status",
+        "top": "Display Linux processes dynamically",
+        "htop": "Interactive process viewer",
+        "kill": "Send signals to processes",
+        
+        # Network
+        "ping": "Send ICMP echo requests to network hosts",
+        "wget": "Download files from the web",
+        "curl": "Transfer data to/from servers",
+        "nc": "Netcat - networking utility for reading/writing",
+        "nginx": "High-performance HTTP server",
+        "python": "Python interpreter running a script",
+        "python3": "Python 3 interpreter running a script",
+        "node": "Node.js JavaScript runtime",
+        
+        # Package management
+        "apk": "Alpine Package Keeper - package manager",
+        "apt": "Advanced package tool - Debian package manager",
+        "yum": "Yellowdog Updater Modified - RPM package manager",
+        
+        # Math/scripting
+        "awk": "Pattern scanning and processing language",
+        "sed": "Stream editor for filtering and transforming text",
+        "bc": "Arbitrary precision calculator",
+        "expr": "Evaluate expressions",
+        
+        # Default
+        "default": "User process running inside container"
+    }
     
     def get_container_pids(self, container_id: str) -> List[int]:
         """
@@ -184,7 +244,7 @@ class ProcessInspector:
                 if content:
                     pids = [int(p) for p in content.split('\n') if p.strip()]
         except Exception as e:
-            print(f"Error reading container PIDs: {e}")
+            print(f"Error reading container PIDs from {cgroup_procs}: {e}")
         
         return pids
     
@@ -243,6 +303,29 @@ class ProcessInspector:
         except Exception as e:
             return None
     
+    def _get_process_description(self, name: str, cmd: str) -> str:
+        """Get a description for a process based on its name"""
+        # Try exact match
+        if name in self.PROCESS_DESCRIPTIONS:
+            return self.PROCESS_DESCRIPTIONS[name]
+        
+        # Try matching first word of command
+        first_word = cmd.split()[0].split('/')[-1] if cmd else name
+        if first_word in self.PROCESS_DESCRIPTIONS:
+            return self.PROCESS_DESCRIPTIONS[first_word]
+        
+        # Check for common patterns
+        if "loop" in cmd.lower() or "while" in cmd.lower():
+            return "Loop/stress script generating CPU load"
+        if "seq" in cmd.lower():
+            return "Sequence generator - often used in counting operations"
+        if "for" in cmd.lower():
+            return "For loop - iterating over a sequence"
+        if "echo" in cmd.lower():
+            return "Echo command - prints text to stdout"
+        
+        return self.PROCESS_DESCRIPTIONS["default"]
+    
     def get_container_processes(self, container_id: str) -> List[dict]:
         """
         Get all processes running inside a container with their info.
@@ -263,7 +346,8 @@ class ProcessInspector:
                     "state_code": info.state,
                     "memory_bytes": info.mem_bytes,
                     "memory_human": self._format_bytes(info.mem_bytes),
-                    "command": info.cmd
+                    "command": info.cmd,
+                    "description": self._get_process_description(info.name, info.cmd)
                 })
         
         return processes
