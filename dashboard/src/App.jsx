@@ -217,13 +217,30 @@ function ContainerCard({ container, metrics, onAction, actionLoading, onMonitor,
   )
 }
 
-// Monitor Modal
+// Monitor Modal with Process List
 function MonitorModal({ container, metrics, history, onClose }) {
+  const [processes, setProcesses] = useState([])
+  const [loadingProcesses, setLoadingProcesses] = useState(false)
+  const [showProcesses, setShowProcesses] = useState(false)
+
   if (!container) return null
   const m = metrics || {}
   const h = history || { cpu: [], mem: [] }
   const memPercent = m.memory_bytes && m.memory_limit_bytes > 0
     ? (m.memory_bytes / m.memory_limit_bytes * 100) : 0
+
+  const fetchProcesses = async () => {
+    setLoadingProcesses(true)
+    setShowProcesses(true)
+    try {
+      const res = await fetch(`${API_URL}/containers/${container.id}/processes`)
+      const data = await res.json()
+      setProcesses(data.processes || [])
+    } catch (e) {
+      console.error('Failed to fetch processes:', e)
+    }
+    setLoadingProcesses(false)
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -234,6 +251,22 @@ function MonitorModal({ container, metrics, history, onClose }) {
         </div>
 
         <div className="modal-body">
+          {/* PID Info Banner */}
+          <div className="pid-banner">
+            <div className="pid-item">
+              <span className="pid-label">Container ID:</span>
+              <span className="pid-value">{container.id}</span>
+            </div>
+            <div className="pid-item">
+              <span className="pid-label">Init PID:</span>
+              <span className="pid-value">{m.init_pid || 'N/A'}</span>
+            </div>
+            <div className="pid-item">
+              <span className="pid-label">State:</span>
+              <StatusBadge status={container.state} />
+            </div>
+          </div>
+
           <div className="monitor-stats">
             <div className="monitor-stat-card">
               <div className="stat-header">
@@ -252,7 +285,7 @@ function MonitorModal({ container, metrics, history, onClose }) {
                 <span>Memory</span>
               </div>
               <div className="stat-value-large">{formatBytes(m.memory_bytes || 0)}</div>
-              <div className="stat-detail">of {formatBytes(m.memory_limit_bytes || 0)}</div>
+              <div className="stat-detail">of {formatBytes(m.memory_limit_bytes || 0)} ({memPercent.toFixed(1)}%)</div>
               <div className="stat-bar">
                 <div className="stat-bar-fill mem" style={{ width: `${Math.min(memPercent, 100)}%` }}></div>
               </div>
@@ -261,15 +294,18 @@ function MonitorModal({ container, metrics, history, onClose }) {
             <div className="monitor-stat-card">
               <div className="stat-header">
                 <span className="stat-icon">🔢</span>
-                <span>Processes</span>
+                <span>Process Count</span>
               </div>
               <div className="stat-value-large">{m.pids || 0}</div>
+              <button className="btn btn-sm" onClick={fetchProcesses} disabled={loadingProcesses}>
+                {loadingProcesses ? '...' : '👁 View Processes'}
+              </button>
             </div>
 
             <div className="monitor-stat-card">
               <div className="stat-header">
                 <span className="stat-icon">🏷</span>
-                <span>Status</span>
+                <span>Uptime</span>
               </div>
               <div className="stat-value-large" style={{ fontSize: '1rem' }}>
                 <StatusBadge status={container.state} />
@@ -277,14 +313,70 @@ function MonitorModal({ container, metrics, history, onClose }) {
             </div>
           </div>
 
-          {h.cpu.length > 1 && (
-            <div style={{ marginTop: '1rem' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                CPU History
+          {/* Process List Panel */}
+          {showProcesses && (
+            <div className="process-panel">
+              <div className="process-header">
+                <h4>🔍 Running Processes</h4>
+                <button className="btn btn-sm" onClick={() => setShowProcesses(false)}>✕ Close</button>
               </div>
-              <LiveChart data={h.cpu} color="#eab308" label="CPU" />
+              {loadingProcesses ? (
+                <div className="process-loading">Loading processes...</div>
+              ) : processes.length === 0 ? (
+                <div className="process-empty">No processes found (container may be stopped)</div>
+              ) : (
+                <div className="process-table-wrapper">
+                  <table className="process-table">
+                    <thead>
+                      <tr>
+                        <th>PID</th>
+                        <th>PPID</th>
+                        <th>Name</th>
+                        <th>State</th>
+                        <th>Memory</th>
+                        <th>Command</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {processes.map(p => (
+                        <tr key={p.pid} className={p.pid === m.init_pid ? 'init-process' : ''}>
+                          <td className="pid-col">{p.pid}</td>
+                          <td className="ppid-col">{p.ppid}</td>
+                          <td className="name-col">{p.name}</td>
+                          <td className="state-col">
+                            <span className={`state-badge ${p.state_code}`}>{p.state}</span>
+                          </td>
+                          <td className="mem-col">{p.memory_human}</td>
+                          <td className="cmd-col" title={p.command}>{p.command.slice(0, 40)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="process-legend">
+                <span><b>PID</b>: Process ID (unique number for each process)</span>
+                <span><b>PPID</b>: Parent Process ID (who spawned this process)</span>
+                <span className="init-highlight">Highlighted row = Container's init process (PID 1 inside)</span>
+              </div>
             </div>
           )}
+
+          {/* Charts */}
+          <div className="charts-grid">
+            {h.cpu.length > 1 && (
+              <div className="chart-container">
+                <div className="chart-title">📈 CPU History</div>
+                <LiveChart data={h.cpu} color="#eab308" label="CPU" />
+              </div>
+            )}
+            {h.mem.length > 1 && (
+              <div className="chart-container">
+                <div className="chart-title">📊 Memory History</div>
+                <LiveChart data={h.mem.map(b => b / (1024 * 1024))} color="#22d3ee" label="Memory (MB)" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

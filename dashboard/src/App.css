@@ -1705,17 +1705,238 @@ body {
   .nav-tabs {
     gap: 0.25rem;
   }
-  
+
   .nav-tab {
     padding: 0.5rem 0.8rem;
     font-size: 0.8rem;
   }
-  
+
   .health-grid {
     grid-template-columns: 1fr 1fr;
   }
-  
+
   .anomaly-item {
     flex-wrap: wrap;
+  }
+}
+
+/* ============== PID Banner ============== */
+.pid-banner {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), rgba(0, 212, 255, 0.1));
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(138, 43, 226, 0.3);
+  flex-wrap: wrap;
+}
+
+.pid-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pid-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pid-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--neon-cyan);
+  font-weight: 600;
+}
+
+/* ============== Process Panel ============== */
+.process-panel {
+  margin-top: 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+}
+
+.process-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.process-header h4 {
+  margin: 0;
+  color: var(--neon-purple);
+  font-size: 1rem;
+}
+
+.process-loading,
+.process-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+}
+
+.process-table-wrapper {
+  overflow-x: auto;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.process-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.process-table th,
+.process-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.process-table th {
+  background: rgba(138, 43, 226, 0.2);
+  color: var(--neon-purple);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+}
+
+.process-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.process-table .init-process {
+  background: rgba(0, 255, 159, 0.1);
+  border-left: 3px solid var(--neon-green);
+}
+
+.process-table .pid-col,
+.process-table .ppid-col {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--neon-cyan);
+}
+
+.process-table .name-col {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.process-table .cmd-col {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.state-badge {
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.state-badge.R {
+  background: rgba(0, 255, 159, 0.2);
+  color: var(--neon-green);
+}
+
+.state-badge.S {
+  background: rgba(0, 212, 255, 0.2);
+  color: var(--neon-cyan);
+}
+
+.state-badge.D {
+  background: rgba(255, 159, 0, 0.2);
+  color: var(--neon-orange);
+}
+
+.state-badge.Z {
+  background: rgba(255, 71, 87, 0.2);
+  color: var(--neon-red);
+}
+
+.state-badge.T {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+.process-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.process-legend .init-highlight {
+  color: var(--neon-green);
+}
+
+/* ============== Charts Grid ============== */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.chart-container {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chart-title {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+/* ============== Small Button ============== */
+.btn-sm {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+
+/* ============== Responsive ============== */
+@media (max-width: 768px) {
+  .pid-banner {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .process-table {
+    font-size: 0.7rem;
+  }
+
+  .process-legend {
+    flex-direction: column;
+    gap: 0.25rem;
   }
 }

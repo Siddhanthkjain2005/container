@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 from .wrapper import manager, Container
 from .metrics import collector
 from .ml import detector
+from .storage import metrics_storage, process_inspector
 
 # Pydantic models
 class ContainerCreate(BaseModel):
@@ -193,17 +194,30 @@ async def metrics_broadcast_task():
                 prev_cpu[cid] = cpu_usec
                 prev_time[cid] = current_time
                 
+                # Get init PID (main process of container)
+                init_pid = process_inspector.get_init_pid(cid)
+                
                 # Real metrics only - no simulation
                 metrics_by_id[cid] = {
                     "cpu_percent": cpu_percent,
                     "memory_bytes": mem,
                     "memory_percent": (mem / mem_limit * 100) if mem_limit > 0 else 0,
                     "memory_limit_bytes": mem_limit,
-                    "pids": pids
+                    "pids": pids,
+                    "init_pid": init_pid
                 }
                 
                 # Feed metrics to ML anomaly detector (only for running containers)
                 detector.add_metrics(cid, cpu_percent, mem, mem_limit)
+                
+                # Store to CSV for history
+                container_name = next((c["name"] for c in containers if c["id"] == cid), cid)
+                health = detector.get_container_analytics(cid).get("health_score", 100)
+                metrics_storage.store_metrics(
+                    cid, container_name, cpu_percent, mem,
+                    (mem / mem_limit * 100) if mem_limit > 0 else 0,
+                    mem_limit, pids, health
+                )
             
             # Get anomalies for broadcast
             all_analytics = detector.get_all_analytics()
@@ -500,3 +514,64 @@ def get_anomalies():
         "anomalies": analytics.get("global_anomalies", []),
         "total": analytics.get("total_anomalies", 0)
     }
+
+# ============== Process & Stats Endpoints ==============
+
+@app.get("/api/containers/{container_id}/processes")
+def get_container_processes(container_id: str):
+    """
+    Get all processes running inside a container.
+    
+    Returns:
+        List of processes with PID, name, state, memory, and command.
+        
+    Explanation:
+        - PID: Process ID - unique identifier for each running process on the host
+        - PPID: Parent Process ID - the PID of the process that spawned this one
+        - State: Running (R), Sleeping (S), Stopped (T), Zombie (Z), etc.
+        - The init process (with lowest PID) is the main container process
+    """
+    processes = process_inspector.get_container_processes(container_id)
+    init_pid = process_inspector.get_init_pid(container_id)
+    
+    return {
+        "container_id": container_id,
+        "init_pid": init_pid,
+        "process_count": len(processes),
+        "processes": processes
+    }
+
+@app.get("/api/containers/{container_id}/history")
+def get_container_history(container_id: str, limit: int = 100):
+    """Get historical metrics from CSV storage"""
+    history = metrics_storage.get_history(container_id, limit)
+    return {
+        "container_id": container_id,
+        "data_points": len(history),
+        "history": history
+    }
+
+@app.get("/api/containers/{container_id}/stats")
+def get_container_stats(container_id: str):
+    """Get statistical summary for a container"""
+    return metrics_storage.get_stats_summary(container_id)
+
+@app.get("/api/history")
+def get_all_history(limit: int = 500):
+    """Get historical metrics for all containers"""
+    return {
+        "data_points": len(metrics_storage.get_all_history(limit)),
+        "history": metrics_storage.get_all_history(limit)
+    }
+
+@app.get("/api/export/csv")
+def export_csv():
+    """Get path to CSV file for download"""
+    csv_path = metrics_storage.export_csv_path()
+    if Path(csv_path).exists():
+        return FileResponse(
+            csv_path, 
+            media_type="text/csv",
+            filename="minicontainer_metrics.csv"
+        )
+    raise HTTPException(status_code=404, detail="No data available yet")
