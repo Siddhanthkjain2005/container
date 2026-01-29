@@ -254,6 +254,12 @@ function MonitorModal({ container, metrics, history, onClose }) {
     setLoadingProcesses(false)
   }
 
+  // Calculate memory sum from processes
+  const processMemSum = processes.reduce((sum, p) => sum + (p.memory_bytes || 0), 0)
+
+  // Get running command from first process (init)
+  const runningCommand = processes.length > 0 ? processes[0].command : null
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal monitor-modal" onClick={e => e.stopPropagation()}>
@@ -278,6 +284,14 @@ function MonitorModal({ container, metrics, history, onClose }) {
               <StatusBadge status={container.state} />
             </div>
           </div>
+
+          {/* Running Command Display */}
+          {runningCommand && (
+            <div className="command-banner">
+              <div className="command-label">▶ Running Command:</div>
+              <code className="command-code">{runningCommand}</code>
+            </div>
+          )}
 
           <div className="monitor-stats">
             <div className="monitor-stat-card">
@@ -950,7 +964,18 @@ function App() {
         {/* Analytics Page */}
         {currentPage === 'analytics' && (
           <div className="analytics-page">
-            <h2 className="page-title">🤖 ML Analytics & Anomaly Detection</h2>
+            <div className="analytics-header">
+              <h2 className="page-title">🤖 ML Analytics & Anomaly Detection</h2>
+              <a
+                className="btn btn-secondary export-btn"
+                href={`${API_URL}/api/export/csv`}
+                download="minicontainer_metrics.csv"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                📥 Export CSV
+              </a>
+            </div>
 
             {/* Health Scores Grid */}
             <div className="analytics-section">
@@ -972,6 +997,49 @@ function App() {
                 })}
                 {containers.length === 0 && (
                   <div className="empty-analytics">No containers to analyze</div>
+                )}
+              </div>
+            </div>
+
+            {/* Resource Usage Graphs */}
+            <div className="analytics-section">
+              <h3>📈 Resource Usage Over Time</h3>
+              <div className="resource-graphs-grid">
+                {containers.map(container => {
+                  const h = history[container.id] || { cpu: [], mem: [] }
+                  return (
+                    <div key={container.id} className="resource-graph-card">
+                      <div className="resource-graph-header">
+                        <span className="resource-container-name">{container.name}</span>
+                        <StatusBadge status={container.state} />
+                      </div>
+                      <div className="resource-charts">
+                        <div className="mini-chart-container">
+                          <div className="mini-chart-label">CPU %</div>
+                          {h.cpu.length > 1 ? (
+                            <LiveChart data={h.cpu} color="#eab308" label="CPU" />
+                          ) : (
+                            <div className="no-data">No data yet</div>
+                          )}
+                        </div>
+                        <div className="mini-chart-container">
+                          <div className="mini-chart-label">Memory (MB)</div>
+                          {h.mem.length > 1 ? (
+                            <LiveChart data={h.mem.map(b => b / (1024 * 1024))} color="#22d3ee" label="Mem" />
+                          ) : (
+                            <div className="no-data">No data yet</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="resource-current">
+                        <span>Current: {(metrics[container.id]?.cpu_percent || 0).toFixed(1)}% CPU</span>
+                        <span>{formatBytes(metrics[container.id]?.memory_bytes || 0)} RAM</span>
+                      </div>
+                    </div>
+                  )
+                })}
+                {containers.length === 0 && (
+                  <div className="empty-analytics">No containers to display graphs for</div>
                 )}
               </div>
             </div>
