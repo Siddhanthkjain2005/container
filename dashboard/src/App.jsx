@@ -235,36 +235,40 @@ function formatDuration(seconds) {
   return `${(seconds / 3600).toFixed(1)}h`
 }
 
-// Format timestamp to IST (Indian Standard Time)
+// Format timestamp to IST (Indian Standard Time) - same format as live clock
 function formatToIST(timestamp) {
   if (!timestamp) return '--'
   const date = new Date(timestamp * 1000)
-  // IST is UTC+5:30
   const options = {
     timeZone: 'Asia/Kolkata',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true
-  }
-  return date.toLocaleTimeString('en-IN', options) + ' IST'
-}
-
-// Format timestamp to IST with date
-function formatToISTFull(timestamp) {
-  if (!timestamp) return '--'
-  const date = new Date(timestamp * 1000)
-  const options = {
-    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
     year: 'numeric',
-    month: 'short',
+    month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hour12: true
   }
-  return date.toLocaleString('en-IN', options) + ' IST'
+  return date.toLocaleString('en-IN', options)
+}
+
+// Format timestamp to IST with date - same format as live clock
+function formatToISTFull(timestamp) {
+  if (!timestamp) return '--'
+  const date = new Date(timestamp * 1000)
+  const options = {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  }
+  return date.toLocaleString('en-IN', options)
 }
 
 // Get current IST time as a formatted string
