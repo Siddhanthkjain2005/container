@@ -1228,19 +1228,22 @@ function App() {
 
     switch (cmdType) {
       case '1':
-        command = `echo 'Starting CPU stress for ${duration}s...'; END=$(($(date +%s) + ${duration})); i=0; while [ $(date +%s) -lt $END ]; do i=$((i+1)); done; echo 'CPU stress complete after ${duration}s'`
+        // Variable CPU stress - alternates between high and low
+        command = `echo 'Starting variable CPU stress for ${duration}s...'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 500000 ]; do i=$((i+1)); done; sleep 0.2; i=0; while [ $i -lt 200000 ]; do i=$((i+1)); done; sleep 0.5; i=0; while [ $i -lt 1000000 ]; do i=$((i+1)); done; sleep 0.1; done; echo 'CPU stress complete'`
         break
       case '2':
         command = `dd if=/dev/zero of=/dev/shm/memtest bs=1M count=${memorySize} 2>/dev/null && echo 'Allocated ${memorySize}MB' && sleep ${duration} && rm -f /dev/shm/memtest && echo 'Memory released after ${duration}s'`
         break
       case '3':
-        command = `dd if=/dev/zero of=/dev/shm/memtest bs=1M count=${memorySize} 2>/dev/null; echo 'Allocated ${memorySize}MB, running CPU stress...'; END=$(($(date +%s) + ${duration})); i=0; while [ $(date +%s) -lt $END ]; do i=$((i+1)); done; rm -f /dev/shm/memtest; echo 'Combined test complete after ${duration}s'`
+        // Combined variable stress
+        command = `dd if=/dev/zero of=/dev/shm/memtest bs=1M count=${memorySize} 2>/dev/null; echo 'Memory allocated, starting variable CPU...'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 0.3; i=0; while [ $i -lt 300000 ]; do i=$((i+1)); done; sleep 0.6; done; rm -f /dev/shm/memtest; echo 'Complete'`
         break
       case '4':
         command = `echo 'Container running for ${duration}s...'; sleep ${duration}; echo 'Done after ${duration}s'`
         break
       case '5':
-        command = `echo 'Starting math calculations for ${duration}s...'; END=$(($(date +%s) + ${duration})); i=0; j=0; while [ $(date +%s) -lt $END ]; do j=$((j+i*i)); i=$((i+1)); done; echo 'Math complete after ${duration}s'`
+        // Spike pattern - heavy bursts followed by idle
+        command = `echo 'Starting spike pattern for ${duration}s...'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do echo 'SPIKE'; i=0; while [ $i -lt 2000000 ]; do i=$((i+1)); done; echo 'IDLE'; sleep 2; i=0; while [ $i -lt 100000 ]; do i=$((i+1)); done; sleep 1; done; echo 'Complete'`
         break
       case '6':
         command = customCmd
