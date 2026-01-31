@@ -1727,8 +1727,7 @@ function App() {
         {currentPage === 'stats' && (
           <div className="page-content">
             <div className="page-header">
-              <h2>Resource Analytics</h2>
-              <p className="page-subtitle">Deep dive into container resource usage and performance</p>
+              <h2>Resources</h2>
             </div>
 
             {/* Resource Comparison Section */}
@@ -1766,70 +1765,6 @@ function App() {
                   <span className="overview-value">{formatBytes(totalMem)}</span>
                   <span className="overview-label">Total Memory</span>
                 </div>
-              </div>
-            </div>
-
-            <div className="section">
-              <h3>Container Details</h3>
-              <div className="details-grid">
-                {containers.map(container => {
-                  const m = metrics[container.id] || {}
-                  return (
-                    <div key={container.id} className="detail-card">
-                      <div className="detail-header">
-                        <span className="detail-name">{container.name}</span>
-                        <StatusBadge status={container.state} />
-                      </div>
-                      <div className="detail-grid">
-                        <div className="detail-item">
-                          <span className="detail-key">Container ID</span>
-                          <code className="detail-value">{container.id}</code>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-key">Init PID</span>
-                          <span className="detail-value mono">{m.init_pid || 'N/A'}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-key">CPU Usage</span>
-                          <span className="detail-value">{(m.cpu_percent || 0).toFixed(1)}%</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-key">Memory Used</span>
-                          <span className="detail-value">{formatBytes(m.memory_bytes || 0)}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-key">Memory Limit</span>
-                          <span className="detail-value">{formatBytes(m.memory_limit_bytes || 0)}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-key">Processes</span>
-                          <span className="detail-value">{m.pids || 0}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-key">CPU Time</span>
-                          <span className="detail-value amber">
-                            {m.cpu_usec ? (
-                              m.cpu_usec >= 1000000
-                                ? `${(m.cpu_usec / 1000000).toFixed(2)}s`
-                                : m.cpu_usec >= 1000
-                                  ? `${(m.cpu_usec / 1000).toFixed(2)}ms`
-                                  : `${m.cpu_usec}us`
-                            ) : '0us'}
-                          </span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-key">Health Score</span>
-                          <span className={`detail-value ${(healthScores[container.id] || 100) >= 80 ? 'green' : 'amber'}`}>
-                            {(healthScores[container.id] || 100).toFixed(0)}/100
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-                {containers.length === 0 && (
-                  <div className="empty-section">No containers available. Create one to see stats.</div>
-                )}
               </div>
             </div>
 
