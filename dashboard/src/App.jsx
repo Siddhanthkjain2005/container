@@ -1706,6 +1706,24 @@ function App() {
                         <ScoreGauge score={efficiency} label="Efficiency" />
                       </div>
                       
+                      {/* Resource History Charts */}
+                      <div className="scores-charts">
+                        <div className="scores-chart-panel">
+                          <div className="scores-chart-header">
+                            <span className="scores-chart-title amber">CPU History</span>
+                            <span className="scores-chart-value">{(m.cpu_percent || 0).toFixed(1)}%</span>
+                          </div>
+                          <AreaChart data={h.cpu} color="#f59e0b" gradientId={`ml-cpu-${container.id}`} height={80} />
+                        </div>
+                        <div className="scores-chart-panel">
+                          <div className="scores-chart-header">
+                            <span className="scores-chart-title cyan">Memory History</span>
+                            <span className="scores-chart-value">{formatBytes(m.memory_bytes || 0)}</span>
+                          </div>
+                          <AreaChart data={h.mem.map(v => v / 1048576)} color="#06b6d4" gradientId={`ml-mem-${container.id}`} height={80} />
+                        </div>
+                      </div>
+                      
                       <div className="scores-trends">
                         <div className="trend-row">
                           <span className="trend-label">CPU Trend</span>
@@ -1719,19 +1737,6 @@ function App() {
                               ({((analytics.prediction?.confidence || 0) * 100).toFixed(0)}% conf)
                             </span>
                           </span>
-                        </div>
-                      </div>
-                      
-                      <div className="scores-sparklines">
-                        <div className="sparkline-row">
-                          <span className="sparkline-label amber">CPU</span>
-                          <Sparkline data={h.cpu} color="#f59e0b" />
-                          <span className="sparkline-value">{(m.cpu_percent || 0).toFixed(1)}%</span>
-                        </div>
-                        <div className="sparkline-row">
-                          <span className="sparkline-label cyan">Mem</span>
-                          <Sparkline data={h.mem.map(v => v / 1048576)} color="#06b6d4" />
-                          <span className="sparkline-value">{formatBytes(m.memory_bytes || 0)}</span>
                         </div>
                       </div>
                       

@@ -380,7 +380,7 @@ def start_container(container_id: str):
 
 @app.post("/api/containers/{container_id}/stop")
 def stop_container(container_id: str):
-    """Stop a container - kill all processes in cgroup"""
+    """Stop a container - kill all processes in cgroup and reset ML stats"""
     # Find container to get PID
     containers = get_running_containers()
     target_container = None
@@ -415,6 +415,9 @@ def stop_container(container_id: str):
                 state_file.write_text(new_content)
             except:
                 pass
+    
+    # Reset ML analytics for this container (scores go back to 100)
+    detector.reset_container(container_id)
     
     run_runtime_command(["stop", container_id])
     return {"status": "stopped"}
