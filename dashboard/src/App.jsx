@@ -267,6 +267,23 @@ function formatToISTFull(timestamp) {
   return date.toLocaleString('en-IN', options) + ' IST'
 }
 
+// Get current IST time as a formatted string
+function getCurrentIST() {
+  const now = new Date()
+  const options = {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  }
+  return now.toLocaleString('en-IN', options)
+}
+
 // Status Badge Component
 function StatusBadge({ status }) {
   const labels = {
@@ -1594,7 +1611,7 @@ function App() {
           {[
             { id: 'dashboard', label: 'Dashboard', icon: Icons.Layers },
             { id: 'stats', label: 'Resources', icon: Icons.BarChart },
-            { id: 'timeline', label: 'Timeline', icon: Icons.GitBranch },
+            { id: 'timeline', label: 'Monitor', icon: Icons.Gauge2 },
             { id: 'analytics', label: 'ML Analytics', icon: Icons.Brain },
             { id: 'about', label: 'About', icon: Icons.Info },
           ].map(tab => (
@@ -1914,126 +1931,227 @@ function App() {
         {currentPage === 'timeline' && (
           <div className="page-content">
             <div className="page-header">
-              <h2>Activity Timeline</h2>
-              <p className="page-subtitle">Track container events and system activities</p>
+              <h2>System Monitor</h2>
+              <div className="live-clock">
+                <Icons.Clock />
+                <span className="clock-time">{getCurrentIST()}</span>
+                <span className="clock-label">IST</span>
+              </div>
             </div>
 
-            <div className="timeline-layout">
-              {/* Recent Events Timeline */}
-              <div className="timeline-main">
-                <div className="section glass-card">
-                  <h3><Icons.GitBranch /> Recent Events</h3>
-                  <div className="timeline-list">
-                    {(() => {
-                      // Build events from anomalies and container states
-                      const events = []
-                      
-                      // Add anomaly events
-                      anomalies.slice(-20).forEach(a => {
-                        events.push({
-                          type: `anomaly_${a.severity}`,
-                          title: a.type?.replace(/_/g, ' ') || 'Anomaly',
-                          description: a.message,
-                          time: formatToIST(a.timestamp),
-                          timestamp: a.timestamp,
-                          container: containers.find(c => c.id === a.container_id)?.name || a.container_id?.slice(0, 8)
-                        })
-                      })
-                      
-                      // Add container state events
-                      containers.forEach(c => {
-                        const m = metrics[c.id] || {}
-                        if (c.state === 'running') {
-                          events.push({
-                            type: 'container_start',
-                            title: 'Container Running',
-                            description: `${c.name} is currently active with ${(m.cpu_percent || 0).toFixed(1)}% CPU`,
-                            time: 'Now',
-                            timestamp: Date.now() / 1000,
-                            container: c.name
-                          })
-                        }
-                        const analytics = containerAnalytics[c.id] || {}
-                        if (analytics.is_stressed) {
-                          events.push({
-                            type: 'stress',
-                            title: 'Container Stressed',
-                            description: `${c.name} is under resource stress`,
-                            time: 'Now',
-                            timestamp: Date.now() / 1000,
-                            container: c.name
-                          })
-                        }
-                      })
-                      
-                      // Sort by timestamp descending
-                      events.sort((a, b) => b.timestamp - a.timestamp)
-                      
-                      if (events.length === 0) {
-                        return (
-                          <div className="empty-timeline">
-                            <span className="icon-lg muted"><Icons.Calendar /></span>
-                            <p>No events recorded yet. Start a container to see activity.</p>
+            {/* Live System Status Grid */}
+            <div className="monitor-grid">
+              {/* Container Status Cards */}
+              <div className="section glass-card monitor-containers">
+                <h3><Icons.Box /> Container Status</h3>
+                <div className="container-status-list">
+                  {containers.length === 0 ? (
+                    <div className="empty-state">
+                      <Icons.Box />
+                      <p>No containers found</p>
+                    </div>
+                  ) : (
+                    containers.map(c => {
+                      const m = metrics[c.id] || {}
+                      const h = history[c.id] || { cpu: [], mem: [] }
+                      const analytics = containerAnalytics[c.id] || {}
+                      return (
+                        <div key={c.id} className={`container-status-card ${c.state}`}>
+                          <div className="csc-header">
+                            <div className="csc-info">
+                              <span className="csc-name">{c.name}</span>
+                              <StatusBadge status={c.state} />
+                            </div>
+                            {c.state === 'running' && (
+                              <div className="csc-uptime">
+                                <Icons.Clock />
+                                <span>{formatDuration(m.uptime || 0)}</span>
+                              </div>
+                            )}
                           </div>
-                        )
-                      }
-                      
-                      return events.slice(0, 20).map((event, i) => (
-                        <TimelineItem key={i} event={event} isLast={i === events.length - 1} />
-                      ))
-                    })()}
+                          {c.state === 'running' && (
+                            <>
+                              <div className="csc-metrics">
+                                <div className="csc-metric">
+                                  <span className="csc-metric-label">CPU</span>
+                                  <span className="csc-metric-value amber">{(m.cpu_percent || 0).toFixed(1)}%</span>
+                                </div>
+                                <div className="csc-metric">
+                                  <span className="csc-metric-label">Memory</span>
+                                  <span className="csc-metric-value cyan">{formatBytes(m.memory_bytes || 0)}</span>
+                                </div>
+                                <div className="csc-metric">
+                                  <span className="csc-metric-label">Processes</span>
+                                  <span className="csc-metric-value">{m.pids || 0}</span>
+                                </div>
+                                <div className="csc-metric">
+                                  <span className="csc-metric-label">Health</span>
+                                  <span className={`csc-metric-value ${(healthScores[c.id] || 100) >= 80 ? 'green' : 'red'}`}>
+                                    {(healthScores[c.id] || 100).toFixed(0)}%
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="csc-chart">
+                                <Sparkline data={h.cpu.slice(-30)} color="#f59e0b" height={30} width={200} />
+                              </div>
+                              {analytics.is_stressed && (
+                                <div className="csc-alert">
+                                  <Icons.AlertTriangle /> Under stress
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Resource Usage Meters */}
+              <div className="section glass-card monitor-resources">
+                <h3><Icons.Gauge2 /> Resource Usage</h3>
+                <div className="resource-meters">
+                  <div className="resource-meter">
+                    <div className="meter-header">
+                      <span className="meter-label">Total CPU</span>
+                      <span className="meter-value amber">{Object.values(metrics).reduce((sum, m) => sum + (m.cpu_percent || 0), 0).toFixed(1)}%</span>
+                    </div>
+                    <div className="meter-track">
+                      <div 
+                        className="meter-fill amber"
+                        style={{ width: `${Math.min(Object.values(metrics).reduce((sum, m) => sum + (m.cpu_percent || 0), 0), 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="resource-meter">
+                    <div className="meter-header">
+                      <span className="meter-label">Total Memory</span>
+                      <span className="meter-value cyan">{formatBytes(Object.values(metrics).reduce((sum, m) => sum + (m.memory_bytes || 0), 0))}</span>
+                    </div>
+                    <div className="meter-track">
+                      <div 
+                        className="meter-fill cyan"
+                        style={{ width: `${Math.min((Object.values(metrics).reduce((sum, m) => sum + (m.memory_bytes || 0), 0) / (256 * 1024 * 1024)) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="resource-meter">
+                    <div className="meter-header">
+                      <span className="meter-label">Running Containers</span>
+                      <span className="meter-value green">{containers.filter(c => c.state === 'running').length} / {containers.length}</span>
+                    </div>
+                    <div className="meter-track">
+                      <div 
+                        className="meter-fill green"
+                        style={{ width: containers.length > 0 ? `${(containers.filter(c => c.state === 'running').length / containers.length) * 100}%` : '0%' }}
+                      />
+                    </div>
+                  </div>
+                  <div className="resource-meter">
+                    <div className="meter-header">
+                      <span className="meter-label">Avg Health Score</span>
+                      <span className={`meter-value ${(systemStats.average_health_score || 100) >= 80 ? 'green' : 'amber'}`}>
+                        {(systemStats.average_health_score || 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="meter-track">
+                      <div 
+                        className={`meter-fill ${(systemStats.average_health_score || 100) >= 80 ? 'green' : 'amber'}`}
+                        style={{ width: `${systemStats.average_health_score || 100}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Summary Sidebar */}
-              <div className="timeline-sidebar">
-                <div className="section glass-card">
-                  <h3><Icons.PieChart /> Event Distribution</h3>
-                  <PieChart 
-                    data={[
-                      { label: 'High', value: anomalies.filter(a => a.severity === 'high').length },
-                      { label: 'Medium', value: anomalies.filter(a => a.severity === 'medium').length },
-                      { label: 'Low', value: anomalies.filter(a => a.severity === 'low').length },
-                    ]}
-                    colors={['#ef4444', '#f59e0b', '#22c55e']}
-                    size={140}
-                  />
+              {/* Recent Anomalies */}
+              <div className="section glass-card monitor-anomalies">
+                <h3><Icons.AlertTriangle /> Recent Anomalies</h3>
+                <div className="anomaly-feed">
+                  {anomalies.length === 0 ? (
+                    <div className="empty-state success">
+                      <Icons.Heart />
+                      <p>All systems normal</p>
+                    </div>
+                  ) : (
+                    anomalies.slice(-10).reverse().map((a, i) => (
+                      <div key={i} className={`anomaly-feed-item ${a.severity}`}>
+                        <div className="afi-icon">
+                          <Icons.AlertTriangle />
+                        </div>
+                        <div className="afi-content">
+                          <div className="afi-header">
+                            <span className="afi-type">{a.type?.replace(/_/g, ' ')}</span>
+                            <span className={`afi-severity ${a.severity}`}>{a.severity}</span>
+                          </div>
+                          <p className="afi-message">{a.message}</p>
+                          <span className="afi-time">{formatToIST(a.timestamp)}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
+              </div>
 
-                <div className="section glass-card">
-                  <h3><Icons.Activity /> Quick Stats</h3>
-                  <div className="quick-stats">
-                    <div className="quick-stat">
-                      <span className="quick-stat-value green">{containers.filter(c => c.state === 'running').length}</span>
-                      <span className="quick-stat-label">Running</span>
+              {/* System Summary */}
+              <div className="section glass-card monitor-summary">
+                <h3><Icons.BarChart /> Summary</h3>
+                <div className="summary-stats">
+                  <div className="summary-stat">
+                    <div className="ss-icon blue"><Icons.Box /></div>
+                    <div className="ss-info">
+                      <span className="ss-value">{containers.length}</span>
+                      <span className="ss-label">Containers</span>
                     </div>
-                    <div className="quick-stat">
-                      <span className="quick-stat-value amber">{anomalies.length}</span>
-                      <span className="quick-stat-label">Anomalies</span>
+                  </div>
+                  <div className="summary-stat">
+                    <div className="ss-icon green"><Icons.Play /></div>
+                    <div className="ss-info">
+                      <span className="ss-value">{containers.filter(c => c.state === 'running').length}</span>
+                      <span className="ss-label">Running</span>
                     </div>
-                    <div className="quick-stat">
-                      <span className="quick-stat-value pink">{containers.filter(c => containerAnalytics[c.id]?.is_stressed).length}</span>
-                      <span className="quick-stat-label">Stressed</span>
+                  </div>
+                  <div className="summary-stat">
+                    <div className="ss-icon amber"><Icons.AlertTriangle /></div>
+                    <div className="ss-info">
+                      <span className="ss-value">{anomalies.length}</span>
+                      <span className="ss-label">Anomalies</span>
+                    </div>
+                  </div>
+                  <div className="summary-stat">
+                    <div className="ss-icon pink"><Icons.Flame /></div>
+                    <div className="ss-info">
+                      <span className="ss-value">{containers.filter(c => containerAnalytics[c.id]?.is_stressed).length}</span>
+                      <span className="ss-label">Stressed</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="section glass-card">
-                  <h3><Icons.Clock /> Uptime</h3>
-                  <div className="uptime-info">
-                    {containers.filter(c => c.state === 'running').map(c => {
-                      const m = metrics[c.id] || {}
-                      return (
-                        <div key={c.id} className="uptime-row">
-                          <span className="uptime-name">{c.name}</span>
-                          <span className="uptime-duration">{formatDuration(m.uptime || 0)}</span>
-                        </div>
-                      )
-                    })}
-                    {containers.filter(c => c.state === 'running').length === 0 && (
-                      <p className="muted">No running containers</p>
-                    )}
+                <div className="severity-breakdown">
+                  <h4>Anomaly Severity</h4>
+                  <div className="severity-bars">
+                    <div className="severity-bar">
+                      <span className="sb-label">High</span>
+                      <div className="sb-track">
+                        <div className="sb-fill high" style={{ width: anomalies.length > 0 ? `${(anomalies.filter(a => a.severity === 'high').length / anomalies.length) * 100}%` : '0%' }} />
+                      </div>
+                      <span className="sb-count">{anomalies.filter(a => a.severity === 'high').length}</span>
+                    </div>
+                    <div className="severity-bar">
+                      <span className="sb-label">Medium</span>
+                      <div className="sb-track">
+                        <div className="sb-fill medium" style={{ width: anomalies.length > 0 ? `${(anomalies.filter(a => a.severity === 'medium').length / anomalies.length) * 100}%` : '0%' }} />
+                      </div>
+                      <span className="sb-count">{anomalies.filter(a => a.severity === 'medium').length}</span>
+                    </div>
+                    <div className="severity-bar">
+                      <span className="sb-label">Low</span>
+                      <div className="sb-track">
+                        <div className="sb-fill low" style={{ width: anomalies.length > 0 ? `${(anomalies.filter(a => a.severity === 'low').length / anomalies.length) * 100}%` : '0%' }} />
+                      </div>
+                      <span className="sb-count">{anomalies.filter(a => a.severity === 'low').length}</span>
+                    </div>
                   </div>
                 </div>
               </div>
