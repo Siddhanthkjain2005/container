@@ -132,6 +132,7 @@ async def metrics_broadcast_task():
     """Periodically broadcast real metrics to WebSocket clients"""
     prev_cpu = {}
     prev_time = {}
+    prev_throttle = {}
     
     while True:
         if ws_manager.active_connections:
@@ -172,6 +173,7 @@ async def metrics_broadcast_task():
                 cpu_usec = 0
                 pids = 0
                 mem_limit = 268435456
+                throttle_count = 0
                 
                 if cgroup.exists():
                     try:
@@ -192,9 +194,17 @@ async def metrics_broadcast_task():
                         for line in (cgroup / "cpu.stat").read_text().splitlines():
                             if line.startswith("usage_usec"):
                                 cpu_usec = int(line.split()[1])
-                                break
+                            elif line.startswith("nr_throttled "):
+                                throttle_count = int(line.split()[1])
                     except:
                         pass
+                
+                # Detect if container is being throttled
+                is_throttled = False
+                if cid in prev_throttle:
+                    throttle_delta = throttle_count - prev_throttle[cid]
+                    is_throttled = throttle_delta > 0
+                prev_throttle[cid] = throttle_count
                 
                 # Calculate CPU percentage from delta
                 cpu_percent = 0
@@ -218,11 +228,12 @@ async def metrics_broadcast_task():
                     "memory_percent": (mem / mem_limit * 100) if mem_limit > 0 else 0,
                     "memory_limit_bytes": mem_limit,
                     "pids": pids,
-                    "init_pid": init_pid
+                    "init_pid": init_pid,
+                    "is_throttled": is_throttled
                 }
                 
                 # Feed metrics to ML anomaly detector (only for running containers)
-                anomalies = detector.add_metrics(cid, cpu_percent, mem, mem_limit)
+                anomalies = detector.add_metrics(cid, cpu_percent, mem, mem_limit, is_throttled)
                 
                 # Store anomalies to CSV
                 for anomaly in anomalies:

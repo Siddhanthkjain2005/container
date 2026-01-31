@@ -67,6 +67,10 @@ class ContainerStats:
     mem_rate: float = 0.0
     prev_cpu: float = 0.0
     prev_mem: int = 0
+    
+    # Throttling tracking
+    is_throttled: bool = False
+    throttle_count: int = 0
 
 
 class EnhancedAnomalyDetector:
@@ -84,8 +88,8 @@ class EnhancedAnomalyDetector:
                  ema_alpha: float = 0.3,
                  ema_alpha_slow: float = 0.1,
                  min_samples: int = 5,
-                 stress_threshold_cpu: float = 70.0,
-                 stress_threshold_mem_percent: float = 80.0):
+                 stress_threshold_cpu: float = 30.0,
+                 stress_threshold_mem_percent: float = 60.0):
         """
         Initialize detector with configurable parameters.
         
@@ -191,7 +195,7 @@ class EnhancedAnomalyDetector:
         return None
     
     def add_metrics(self, container_id: str, cpu_percent: float, memory_bytes: int, 
-                    memory_limit: int = 268435456) -> List[dict]:
+                    memory_limit: int = 268435456, is_throttled: bool = False) -> List[dict]:
         """
         Add new metrics and run all detection algorithms.
         
@@ -199,6 +203,11 @@ class EnhancedAnomalyDetector:
         """
         stats = self._get_stats(container_id)
         current_time = time.time()
+        
+        # Track throttling
+        stats.is_throttled = is_throttled
+        if is_throttled:
+            stats.throttle_count = getattr(stats, 'throttle_count', 0) + 1
         
         # Update sample count
         stats.samples_collected += 1
@@ -334,8 +343,8 @@ class EnhancedAnomalyDetector:
             stats.anomalies.append(anomaly)
             self.global_anomalies.append(anomaly)
         
-        # Calculate all scores
-        stats.health_score = self._calculate_health_score(stats, cpu_percent, memory_bytes, memory_limit)
+        # Calculate all scores - pass throttling status
+        stats.health_score = self._calculate_health_score(stats, cpu_percent, memory_bytes, memory_limit, is_throttled)
         stats.stability_score = self._calculate_stability_score(stats)
         stats.efficiency_score = self._calculate_efficiency_score(stats, cpu_percent, memory_bytes, memory_limit)
         
@@ -344,22 +353,30 @@ class EnhancedAnomalyDetector:
         
         return anomalies_detected
     
-    def _calculate_health_score(self, stats: ContainerStats, cpu: float, mem: int, mem_limit: int) -> float:
+    def _calculate_health_score(self, stats: ContainerStats, cpu: float, mem: int, mem_limit: int, throttled: bool = False) -> float:
         """Calculate comprehensive health score (0-100)"""
         score = 100.0
         
-        # CPU usage penalty
-        if cpu > 90:
-            score -= 30
-        elif cpu > 70:
-            score -= (cpu - 70) * 0.5
+        # CPU usage penalty - more sensitive thresholds
+        if cpu > 80:
+            score -= 25
+        elif cpu > 50:
+            score -= (cpu - 50) * 0.6
+        elif cpu > 20:
+            score -= (cpu - 20) * 0.3
         
-        # Memory usage penalty
+        # Memory usage penalty - more sensitive thresholds
         mem_percent = (mem / mem_limit * 100) if mem_limit > 0 else 0
-        if mem_percent > 90:
-            score -= 30
-        elif mem_percent > 70:
-            score -= (mem_percent - 70) * 0.5
+        if mem_percent > 80:
+            score -= 25
+        elif mem_percent > 50:
+            score -= (mem_percent - 50) * 0.6
+        elif mem_percent > 20:
+            score -= (mem_percent - 20) * 0.3
+        
+        # Throttling penalty - indicates container is hitting resource limits
+        if throttled:
+            score -= 15
         
         # Recent anomalies penalty
         recent = [a for a in stats.anomalies if time.time() - a["timestamp"] < 120]
@@ -370,7 +387,13 @@ class EnhancedAnomalyDetector:
         
         # Stress penalty
         if stats.is_stressed:
+            score -= 15
+        
+        # Efficiency penalty - if efficiency is low
+        if stats.efficiency_score < 50:
             score -= 10
+        elif stats.efficiency_score < 70:
+            score -= 5
         
         return max(0, min(100, score))
     
