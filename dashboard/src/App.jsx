@@ -235,6 +235,38 @@ function formatDuration(seconds) {
   return `${(seconds / 3600).toFixed(1)}h`
 }
 
+// Format timestamp to IST (Indian Standard Time)
+function formatToIST(timestamp) {
+  if (!timestamp) return '--'
+  const date = new Date(timestamp * 1000)
+  // IST is UTC+5:30
+  const options = {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  }
+  return date.toLocaleTimeString('en-IN', options) + ' IST'
+}
+
+// Format timestamp to IST with date
+function formatToISTFull(timestamp) {
+  if (!timestamp) return '--'
+  const date = new Date(timestamp * 1000)
+  const options = {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  }
+  return date.toLocaleString('en-IN', options) + ' IST'
+}
+
 // Status Badge Component
 function StatusBadge({ status }) {
   const labels = {
@@ -1902,7 +1934,7 @@ function App() {
                           type: `anomaly_${a.severity}`,
                           title: a.type?.replace(/_/g, ' ') || 'Anomaly',
                           description: a.message,
-                          time: new Date(a.timestamp * 1000).toLocaleTimeString(),
+                          time: formatToIST(a.timestamp),
                           timestamp: a.timestamp,
                           container: containers.find(c => c.id === a.container_id)?.name || a.container_id?.slice(0, 8)
                         })
@@ -2210,7 +2242,7 @@ function App() {
                       anomalies.slice(-15).reverse().map((anomaly, i) => (
                         <div key={i} className="anomaly-item">
                           <span className="anomaly-time">
-                            {new Date(anomaly.timestamp * 1000).toLocaleTimeString()}
+                            {formatToIST(anomaly.timestamp)}
                           </span>
                           <span className={`anomaly-badge ${anomaly.severity}`}>
                             {anomaly.severity?.toUpperCase()}
