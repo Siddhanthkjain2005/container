@@ -709,8 +709,38 @@ function MonitorModal({ container, metrics, history, onClose }) {
     return cmd.length > 50 ? cmd.substring(0, 50) + '...' : cmd
   }
   
+  // Get description for the running command
+  const getCommandDescription = () => {
+    if (processes.length === 0) return null
+    const cmd = processes[0].command || ''
+    
+    if (cmd.includes('[Variable CPU]') || cmd.includes('Variable CPU')) {
+      return 'Alternating CPU load pattern between high and low intensity. Used to test ML adaptation to changing workloads.'
+    }
+    if (cmd.includes('[Spike Demo]') || cmd.includes('SPIKE')) {
+      return 'Heavy CPU bursts followed by idle periods. Creates anomaly spikes for ML detection demo.'
+    }
+    if (cmd.includes('[Gradual Increase]') || cmd.includes('intensity=')) {
+      return 'Slowly increasing CPU load over time. Shows trend detection and prediction capabilities.'
+    }
+    if (cmd.includes('[Normal Workload]')) {
+      return 'Stable moderate CPU load. Establishes a healthy baseline for comparison.'
+    }
+    if (cmd.includes('[Memory Test]') || cmd.includes('dd if=/dev/zero')) {
+      return 'Allocates memory using dd command. Tests memory limits and tracking.'
+    }
+    if (cmd.includes('while') || cmd.includes('for')) {
+      return 'Shell loop performing calculations. Generates CPU load for testing.'
+    }
+    if (cmd.includes('sleep')) {
+      return 'Process sleeping/waiting. Container is idle but running.'
+    }
+    return 'Custom user command running inside the container.'
+  }
+  
   const runningCommand = getCleanCommand()
   const fullCommand = processes.length > 0 ? processes[0].command : null
+  const commandDescription = getCommandDescription()
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -741,10 +771,18 @@ function MonitorModal({ container, metrics, history, onClose }) {
             </div>
           </div>
 
-          {runningCommand && (
-            <div className="command-banner" title={fullCommand}>
-              <span className="command-label">Running</span>
-              <code className="command-code">{runningCommand}</code>
+          {fullCommand && (
+            <div className="command-section">
+              <div className="command-header">
+                <span className="icon-sm green"><Icons.Terminal /></span>
+                <span>Running Command</span>
+              </div>
+              <div className="command-content">
+                <code className="command-full">{fullCommand}</code>
+                {commandDescription && (
+                  <p className="command-description">{commandDescription}</p>
+                )}
+              </div>
             </div>
           )}
 
@@ -797,7 +835,7 @@ function MonitorModal({ container, metrics, history, onClose }) {
           {showProcesses && (
             <div className="process-panel">
               <div className="process-header">
-                <h4>Running Processes</h4>
+                <h4>Running Processes ({processes.length})</h4>
                 <button className="btn btn-sm btn-ghost" onClick={() => setShowProcesses(false)}>
                   <Icons.X />
                 </button>
@@ -816,31 +854,29 @@ function MonitorModal({ container, metrics, history, onClose }) {
                   </div>
                 </div>
               ) : (
-                <div className="process-table-wrapper">
-                  <table className="process-table">
-                    <thead>
-                      <tr>
-                        <th>PID</th>
-                        <th>PPID</th>
-                        <th>Name</th>
-                        <th>State</th>
-                        <th>Memory</th>
-                        <th>Description</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {processes.map(p => (
-                        <tr key={p.pid} className={p.pid === m.init_pid ? 'init-process' : ''}>
-                          <td className="mono">{p.pid}</td>
-                          <td className="mono">{p.ppid}</td>
-                          <td>{p.name}</td>
-                          <td><span className={`state-badge ${p.state_code}`}>{p.state}</span></td>
-                          <td className="mono">{p.memory_human}</td>
-                          <td className="desc" title={p.command}>{p.description || 'User process'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="process-list">
+                  {processes.map(p => (
+                    <div key={p.pid} className={`process-item ${p.pid === m.init_pid ? 'init-process' : ''}`}>
+                      <div className="process-item-header">
+                        <div className="process-item-main">
+                          <span className="process-name">{p.name}</span>
+                          <span className={`state-badge ${p.state_code}`}>{p.state}</span>
+                          {p.pid === m.init_pid && <span className="init-badge">INIT</span>}
+                        </div>
+                        <div className="process-item-meta">
+                          <span className="meta-item"><strong>PID:</strong> {p.pid}</span>
+                          <span className="meta-item"><strong>PPID:</strong> {p.ppid}</span>
+                          <span className="meta-item"><strong>Memory:</strong> {p.memory_human}</span>
+                        </div>
+                      </div>
+                      <div className="process-item-command">
+                        <code>{p.command}</code>
+                      </div>
+                      <div className="process-item-desc">
+                        {p.description || 'User-defined process running in container'}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

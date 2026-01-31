@@ -991,6 +991,56 @@ body {
   word-break: break-all;
 }
 
+/* Command Section - Enhanced */
+.command-section {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.command-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(34, 197, 94, 0.1);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--green);
+}
+
+.command-content {
+  padding: 16px;
+}
+
+.command-full {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--cyan);
+  background: var(--bg-secondary);
+  padding: 12px;
+  border-radius: var(--radius);
+  word-break: break-all;
+  white-space: pre-wrap;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.command-description {
+  margin-top: 12px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 12px;
+  background: rgba(255,255,255,0.02);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--green);
+}
+
 /* Stats Grid */
 .stats-grid {
   display: grid;
@@ -1097,46 +1147,97 @@ body {
   color: var(--text-muted);
 }
 
-.process-table-wrapper {
-  overflow-x: auto;
+/* Process List (Card Style) */
+.process-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  max-height: 350px;
+  overflow-y: auto;
 }
 
-.process-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8125rem;
-}
-
-.process-table th {
-  text-align: left;
-  padding: 12px 16px;
+.process-item {
   background: var(--surface);
-  color: var(--text-muted);
-  font-weight: 500;
-  font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  transition: all 0.2s ease;
 }
 
-.process-table td {
-  padding: 10px 16px;
-  border-top: 1px solid var(--border);
-  color: var(--text-secondary);
+.process-item:hover {
+  border-color: var(--blue);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.process-table tr.init-process td {
+.process-item.init-process {
+  border-color: var(--blue);
   background: rgba(59, 130, 246, 0.05);
 }
 
-.process-table .mono {
-  font-family: 'JetBrains Mono', monospace;
+.process-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
-.process-table .desc {
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.process-item-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.process-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.init-badge {
+  background: var(--blue);
+  color: white;
+  font-size: 0.625rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.process-item-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.process-item-meta .meta-item {
+  display: flex;
+  gap: 4px;
+}
+
+.process-item-meta strong {
+  color: var(--text-secondary);
+}
+
+.process-item-command {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+}
+
+.process-item-command code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--amber);
   white-space: nowrap;
+}
+
+.process-item-desc {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 .state-badge {

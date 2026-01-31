@@ -84,7 +84,7 @@ class EnhancedAnomalyDetector:
     """
     
     def __init__(self, 
-                 base_z_threshold: float = 2.0,
+                 base_z_threshold: float = 1.5,
                  ema_alpha: float = 0.3,
                  ema_alpha_slow: float = 0.1,
                  min_samples: int = 5,
@@ -265,10 +265,10 @@ class EnhancedAnomalyDetector:
             cpu_z = (cpu_percent - stats.cpu_ema) / cpu_std if cpu_std > 0 else 0
             
             if abs(cpu_z) > threshold:
-                # Severity based on z-score magnitude
-                if abs(cpu_z) > threshold * 2:
+                # Severity based on z-score magnitude - adjusted thresholds for more high severity
+                if abs(cpu_z) > threshold * 1.5:
                     severity = "high"
-                elif abs(cpu_z) > threshold * 1.3:
+                elif abs(cpu_z) > threshold * 1.2:
                     severity = "medium"
                 else:
                     severity = "low"
@@ -290,10 +290,10 @@ class EnhancedAnomalyDetector:
             mem_z = (memory_bytes - stats.mem_ema) / mem_std if mem_std > 0 else 0
             
             if abs(mem_z) > threshold:
-                # Severity based on z-score magnitude
-                if abs(mem_z) > threshold * 2:
+                # Severity based on z-score magnitude - adjusted for more high severity
+                if abs(mem_z) > threshold * 1.5:
                     severity = "high"
-                elif abs(mem_z) > threshold * 1.3:
+                elif abs(mem_z) > threshold * 1.2:
                     severity = "medium"
                 else:
                     severity = "low"
@@ -314,11 +314,11 @@ class EnhancedAnomalyDetector:
             
             # 2. Sudden Change Detection
             is_sudden, change_ratio = self._detect_sudden_change(cpu_percent, stats.cpu_history)
-            if is_sudden and change_ratio > 0.5:  # Lower threshold for detection
-                # Severity based on change magnitude
-                if change_ratio > 2.0:
+            if is_sudden and change_ratio > 0.4:  # Lower threshold for detection
+                # Severity based on change magnitude - adjusted for more high severity
+                if change_ratio > 1.0:
                     severity = "high"
-                elif change_ratio > 1.0:
+                elif change_ratio > 0.7:
                     severity = "medium"
                 else:
                     severity = "low"
