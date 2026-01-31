@@ -1404,7 +1404,16 @@ function App() {
   const [containerAnalytics, setContainerAnalytics] = useState({})
   const [systemStats, setSystemStats] = useState({})
   const [anomalies, setAnomalies] = useState([])
+  const [liveTime, setLiveTime] = useState(getCurrentIST())
   const wsRef = useRef(null)
+
+  // Update live clock every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveTime(getCurrentIST())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type })
@@ -1873,7 +1882,7 @@ function App() {
               <h2>Container Insights</h2>
               <div className="live-clock">
                 <Icons.Clock />
-                <span className="clock-time">{getCurrentIST()}</span>
+                <span className="clock-time">{liveTime}</span>
               </div>
             </div>
 
@@ -2223,7 +2232,7 @@ function App() {
               <h2>ML Analytics & Anomaly Detection</h2>
               <div className="live-clock">
                 <Icons.Clock />
-                <span className="clock-time">{getCurrentIST()}</span>
+                <span className="clock-time">{liveTime}</span>
               </div>
               <div className="header-actions-group">
                 <a
