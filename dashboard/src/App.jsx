@@ -146,6 +146,32 @@ const Icons = {
     <svg viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 2L2 19h20L12 2z"/>
     </svg>
+  ),
+  TrendUp: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+    </svg>
+  ),
+  TrendDown: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>
+    </svg>
+  ),
+  Gauge: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>
+    </svg>
+  ),
+  PieChart: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/>
+    </svg>
+  ),
+  Sparkles: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+      <path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>
+    </svg>
   )
 }
 
@@ -156,6 +182,14 @@ function formatBytes(bytes) {
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
+// Format duration to human readable
+function formatDuration(seconds) {
+  if (!seconds || seconds === 0) return '0s'
+  if (seconds < 60) return `${seconds.toFixed(0)}s`
+  if (seconds < 3600) return `${(seconds / 60).toFixed(1)}m`
+  return `${(seconds / 3600).toFixed(1)}h`
 }
 
 // Status Badge Component
@@ -172,6 +206,141 @@ function StatusBadge({ status }) {
       <span className="status-dot"></span>
       {labels[status] || status}
     </span>
+  )
+}
+
+// Trend Indicator Component
+function TrendIndicator({ trend, size = 'sm' }) {
+  if (!trend || trend.direction === 'stable') {
+    return <span className={`trend-indicator stable ${size}`}>→ Stable</span>
+  }
+  
+  const isUp = trend.direction === 'increasing'
+  return (
+    <span className={`trend-indicator ${isUp ? 'up' : 'down'} ${size}`}>
+      {isUp ? <Icons.TrendUp /> : <Icons.TrendDown />}
+      <span>{trend.description || (isUp ? 'Increasing' : 'Decreasing')}</span>
+    </span>
+  )
+}
+
+// Donut/Pie Chart Component
+function DonutChart({ value, max = 100, color = '#06b6d4', size = 80, strokeWidth = 8, label = '' }) {
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const percent = Math.min(value / max, 1)
+  const offset = circumference - (percent * circumference)
+  
+  return (
+    <div className="donut-chart" style={{ width: size, height: size }}>
+      <svg viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.1)"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size/2} ${size/2})`}
+          style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+        />
+      </svg>
+      <div className="donut-center">
+        <span className="donut-value">{value.toFixed(0)}</span>
+        {label && <span className="donut-label">{label}</span>}
+      </div>
+    </div>
+  )
+}
+
+// Histogram Bar Chart Component
+function HistogramChart({ data, color = '#f59e0b', height = 100 }) {
+  if (!data || !data.counts || data.counts.length === 0) {
+    return (
+      <div className="chart-placeholder" style={{ height }}>
+        <span>No distribution data</span>
+      </div>
+    )
+  }
+  
+  const maxCount = Math.max(...data.counts, 1)
+  const barWidth = 100 / data.counts.length
+  
+  return (
+    <div className="histogram-chart" style={{ height }}>
+      <div className="histogram-bars">
+        {data.counts.map((count, i) => (
+          <div
+            key={i}
+            className="histogram-bar"
+            style={{
+              width: `${barWidth}%`,
+              height: `${(count / maxCount) * 100}%`,
+              backgroundColor: color,
+              opacity: 0.7 + (0.3 * (count / maxCount))
+            }}
+            title={`${data.labels?.[i] || i}: ${count}`}
+          />
+        ))}
+      </div>
+      <div className="histogram-labels">
+        {data.labels && data.labels.length <= 5 && data.labels.map((label, i) => (
+          <span key={i} style={{ width: `${barWidth}%` }}>{label}</span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Score Gauge Component
+function ScoreGauge({ score, label, color }) {
+  const scoreClass = score >= 80 ? 'good' : score >= 50 ? 'warning' : 'critical'
+  const gaugeColor = color || (score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444')
+  
+  return (
+    <div className={`score-gauge ${scoreClass}`}>
+      <DonutChart value={score} max={100} color={gaugeColor} size={70} strokeWidth={6} />
+      <span className="score-gauge-label">{label}</span>
+    </div>
+  )
+}
+
+// Mini Sparkline Component  
+function Sparkline({ data, color = '#06b6d4', height = 30, width = 100 }) {
+  if (!data || data.length < 2) return null
+  
+  const max = Math.max(...data, 1)
+  const min = Math.min(...data, 0)
+  const range = max - min || 1
+  
+  const points = data.map((val, i) => {
+    const x = (i / (data.length - 1)) * width
+    const y = height - ((val - min) / range) * height
+    return `${x},${y}`
+  }).join(' ')
+  
+  return (
+    <svg className="sparkline" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
@@ -906,6 +1075,10 @@ function App() {
   const [actionLoading, setActionLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [healthScores, setHealthScores] = useState({})
+  const [stabilityScores, setStabilityScores] = useState({})
+  const [efficiencyScores, setEfficiencyScores] = useState({})
+  const [containerAnalytics, setContainerAnalytics] = useState({})
+  const [systemStats, setSystemStats] = useState({})
   const [anomalies, setAnomalies] = useState([])
   const wsRef = useRef(null)
 
@@ -962,6 +1135,18 @@ function App() {
 
             if (data.health_scores) {
               setHealthScores(data.health_scores)
+            }
+            if (data.stability_scores) {
+              setStabilityScores(data.stability_scores)
+            }
+            if (data.efficiency_scores) {
+              setEfficiencyScores(data.efficiency_scores)
+            }
+            if (data.container_analytics) {
+              setContainerAnalytics(data.container_analytics)
+            }
+            if (data.system_stats) {
+              setSystemStats(data.system_stats)
             }
             if (data.anomalies) {
               setAnomalies(prev => [...prev.slice(-50), ...data.anomalies])
@@ -1417,60 +1602,140 @@ function App() {
           <div className="page-content">
             <div className="page-header">
               <h2>ML Analytics & Anomaly Detection</h2>
-              <a
-                className="btn btn-secondary btn-icon-text"
-                href={`${API_URL}/api/export/csv`}
-                download="minicontainer_metrics.csv"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Icons.Download /> Export CSV
-              </a>
+              <div className="header-actions-group">
+                <a
+                  className="btn btn-secondary btn-icon-text"
+                  href={`${API_URL}/api/export/csv`}
+                  download="minicontainer_metrics.csv"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Icons.Download /> Metrics CSV
+                </a>
+                <a
+                  className="btn btn-secondary btn-icon-text"
+                  href={`${API_URL}/api/export/anomalies`}
+                  download="minicontainer_anomalies.csv"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Icons.Download /> Anomalies CSV
+                </a>
+              </div>
             </div>
 
+            {/* System Overview Stats */}
             <div className="section">
-              <h3>Container Health Scores</h3>
-              <div className="health-grid">
+              <h3><Icons.PieChart /> System Overview</h3>
+              <div className="system-overview-grid">
+                <div className="overview-stat-card">
+                  <span className="overview-stat-icon blue"><Icons.Box /></span>
+                  <div className="overview-stat-content">
+                    <span className="overview-stat-value">{containers.length}</span>
+                    <span className="overview-stat-label">Containers</span>
+                  </div>
+                </div>
+                <div className="overview-stat-card">
+                  <span className="overview-stat-icon green"><Icons.Heart /></span>
+                  <div className="overview-stat-content">
+                    <span className="overview-stat-value">{(systemStats.average_health_score || 100).toFixed(0)}</span>
+                    <span className="overview-stat-label">Avg Health</span>
+                  </div>
+                </div>
+                <div className="overview-stat-card">
+                  <span className="overview-stat-icon amber"><Icons.Cpu /></span>
+                  <div className="overview-stat-content">
+                    <span className="overview-stat-value">{(systemStats.total_cpu_percent || 0).toFixed(1)}%</span>
+                    <span className="overview-stat-label">Total CPU</span>
+                  </div>
+                </div>
+                <div className="overview-stat-card">
+                  <span className="overview-stat-icon cyan"><Icons.Memory /></span>
+                  <div className="overview-stat-content">
+                    <span className="overview-stat-value">{(systemStats.total_memory_mb || 0).toFixed(0)} MB</span>
+                    <span className="overview-stat-label">Total Memory</span>
+                  </div>
+                </div>
+                <div className="overview-stat-card">
+                  <span className="overview-stat-icon pink"><Icons.AlertTriangle /></span>
+                  <div className="overview-stat-content">
+                    <span className="overview-stat-value">{anomalies.length}</span>
+                    <span className="overview-stat-label">Anomalies</span>
+                  </div>
+                </div>
+                <div className="overview-stat-card">
+                  <span className="overview-stat-icon purple"><Icons.Sparkles /></span>
+                  <div className="overview-stat-content">
+                    <span className="overview-stat-value">{(systemStats.average_efficiency_score || 100).toFixed(0)}</span>
+                    <span className="overview-stat-label">Efficiency</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Container Health with Multiple Scores */}
+            <div className="section">
+              <h3><Icons.Gauge /> Container Scores</h3>
+              <div className="scores-grid">
                 {containers.map(container => {
-                  const score = healthScores[container.id] || 100
-                  const scoreClass = score >= 80 ? 'good' : score >= 50 ? 'warning' : 'critical'
+                  const health = healthScores[container.id] || 100
+                  const stability = stabilityScores[container.id] || 100
+                  const efficiency = efficiencyScores[container.id] || 100
+                  const analytics = containerAnalytics[container.id] || {}
                   const m = metrics[container.id] || {}
+                  const h = history[container.id] || { cpu: [], mem: [] }
+                  
                   return (
-                    <div key={container.id} className={`health-card ${scoreClass}`}>
-                      <div className="health-header">
-                        <span className="health-name">{container.name}</span>
+                    <div key={container.id} className="container-scores-card">
+                      <div className="scores-card-header">
+                        <div className="scores-card-title">
+                          <span className="icon-wrapper subtle"><Icons.Box /></span>
+                          <span>{container.name}</span>
+                        </div>
                         <StatusBadge status={container.state} />
                       </div>
-                      <div className="health-score-wrapper">
-                        <div className="health-score-circle">
-                          <svg viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="45" className="score-bg" />
-                            <circle 
-                              cx="50" 
-                              cy="50" 
-                              r="45" 
-                              className="score-fill"
-                              strokeDasharray={`${score * 2.83} 283`}
-                              strokeDashoffset="0"
-                            />
-                          </svg>
-                          <span className="health-score">{score.toFixed(0)}</span>
+                      
+                      <div className="scores-gauges">
+                        <ScoreGauge score={health} label="Health" />
+                        <ScoreGauge score={stability} label="Stability" />
+                        <ScoreGauge score={efficiency} label="Efficiency" />
+                      </div>
+                      
+                      <div className="scores-trends">
+                        <div className="trend-row">
+                          <span className="trend-label">CPU Trend</span>
+                          <TrendIndicator trend={analytics.trend} />
+                        </div>
+                        <div className="trend-row">
+                          <span className="trend-label">Prediction</span>
+                          <span className="prediction-value">
+                            {analytics.prediction?.value?.toFixed(1) || '--'}% 
+                            <span className="prediction-confidence">
+                              ({((analytics.prediction?.confidence || 0) * 100).toFixed(0)}% conf)
+                            </span>
+                          </span>
                         </div>
                       </div>
-                      <div className="health-metrics">
-                        <div className="health-metric">
-                          <span className="health-metric-label">CPU</span>
-                          <span className="health-metric-value">{(m.cpu_percent || 0).toFixed(1)}%</span>
+                      
+                      <div className="scores-sparklines">
+                        <div className="sparkline-row">
+                          <span className="sparkline-label amber">CPU</span>
+                          <Sparkline data={h.cpu} color="#f59e0b" />
+                          <span className="sparkline-value">{(m.cpu_percent || 0).toFixed(1)}%</span>
                         </div>
-                        <div className="health-metric">
-                          <span className="health-metric-label">Memory</span>
-                          <span className="health-metric-value">{formatBytes(m.memory_bytes || 0)}</span>
-                        </div>
-                        <div className="health-metric">
-                          <span className="health-metric-label">PIDs</span>
-                          <span className="health-metric-value">{m.pids || 0}</span>
+                        <div className="sparkline-row">
+                          <span className="sparkline-label cyan">Mem</span>
+                          <Sparkline data={h.mem.map(v => v / 1048576)} color="#06b6d4" />
+                          <span className="sparkline-value">{formatBytes(m.memory_bytes || 0)}</span>
                         </div>
                       </div>
+                      
+                      {analytics.is_stressed && (
+                        <div className="stress-warning">
+                          <Icons.AlertTriangle />
+                          <span>Container under stress</span>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -1480,48 +1745,93 @@ function App() {
               </div>
             </div>
 
+            {/* Anomaly Timeline and Distribution */}
             <div className="section">
-              <h3>Detected Anomalies</h3>
-              <div className="anomaly-list">
-                {anomalies.length === 0 ? (
-                  <div className="no-anomalies">
-                    <span className="icon-sm green"><Icons.Heart /></span>
-                    <span>No anomalies detected - all systems normal</span>
-                  </div>
-                ) : (
-                  anomalies.slice(-20).reverse().map((anomaly, i) => (
-                    <div key={i} className="anomaly-item">
-                      <span className="anomaly-time">
-                        {new Date(anomaly.timestamp * 1000).toLocaleTimeString()}
-                      </span>
-                      <span className={`anomaly-badge ${anomaly.severity}`}>
-                        {anomaly.severity?.toUpperCase()}
-                      </span>
-                      <span className="anomaly-type">{anomaly.type}</span>
-                      <span className="anomaly-msg">{anomaly.message}</span>
+              <h3><Icons.AlertTriangle /> Anomaly Analysis</h3>
+              <div className="anomaly-analysis-grid">
+                <div className="anomaly-stats-panel">
+                  <h4>Anomaly Summary</h4>
+                  <div className="anomaly-stats">
+                    <div className="anomaly-stat">
+                      <span className="anomaly-stat-value high">{anomalies.filter(a => a.severity === 'high').length}</span>
+                      <span className="anomaly-stat-label">High Severity</span>
                     </div>
-                  ))
-                )}
+                    <div className="anomaly-stat">
+                      <span className="anomaly-stat-value medium">{anomalies.filter(a => a.severity === 'medium').length}</span>
+                      <span className="anomaly-stat-label">Medium Severity</span>
+                    </div>
+                    <div className="anomaly-stat">
+                      <span className="anomaly-stat-value low">{anomalies.filter(a => a.severity === 'low').length}</span>
+                      <span className="anomaly-stat-label">Low Severity</span>
+                    </div>
+                  </div>
+                  
+                  <h4>By Type</h4>
+                  <div className="anomaly-types">
+                    {Object.entries(
+                      anomalies.reduce((acc, a) => {
+                        acc[a.type] = (acc[a.type] || 0) + 1
+                        return acc
+                      }, {})
+                    ).slice(0, 5).map(([type, count]) => (
+                      <div key={type} className="anomaly-type-row">
+                        <span className="anomaly-type-name">{type.replace(/_/g, ' ')}</span>
+                        <span className="anomaly-type-count">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="anomaly-timeline-panel">
+                  <h4>Recent Anomalies</h4>
+                  <div className="anomaly-list">
+                    {anomalies.length === 0 ? (
+                      <div className="no-anomalies">
+                        <span className="icon-sm green"><Icons.Heart /></span>
+                        <span>No anomalies detected - all systems normal</span>
+                      </div>
+                    ) : (
+                      anomalies.slice(-15).reverse().map((anomaly, i) => (
+                        <div key={i} className="anomaly-item">
+                          <span className="anomaly-time">
+                            {new Date(anomaly.timestamp * 1000).toLocaleTimeString()}
+                          </span>
+                          <span className={`anomaly-badge ${anomaly.severity}`}>
+                            {anomaly.severity?.toUpperCase()}
+                          </span>
+                          <span className="anomaly-type">{anomaly.type?.replace(/_/g, ' ')}</span>
+                          <span className="anomaly-msg">{anomaly.message}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
+            {/* ML Algorithm Explanation */}
             <div className="section">
-              <h3>How It Works</h3>
+              <h3><Icons.Brain /> ML Algorithms</h3>
               <div className="info-cards">
                 <div className="info-card">
                   <span className="icon-wrapper blue"><Icons.Activity /></span>
-                  <h4>Z-Score Detection</h4>
-                  <p>Uses statistical Z-score analysis to detect when CPU or memory usage deviates significantly from normal patterns.</p>
+                  <h4>Adaptive Z-Score</h4>
+                  <p>Uses exponential moving averages with adaptive thresholds that adjust based on container volatility patterns.</p>
                 </div>
                 <div className="info-card">
                   <span className="icon-wrapper green"><Icons.Heart /></span>
-                  <h4>Health Scoring</h4>
-                  <p>Combines resource usage, stability metrics, and recent anomalies into a 0-100 health score.</p>
+                  <h4>Multi-Score Health</h4>
+                  <p>Three distinct scores: Health (current state), Stability (variance), and Efficiency (optimal resource usage).</p>
                 </div>
                 <div className="info-card">
-                  <span className="icon-wrapper amber"><Icons.BarChart /></span>
-                  <h4>Trend Analysis</h4>
-                  <p>Monitors usage patterns over time to identify increasing/decreasing resource consumption trends.</p>
+                  <span className="icon-wrapper amber"><Icons.TrendUp /></span>
+                  <h4>Trend Prediction</h4>
+                  <p>Linear regression on historical data predicts future CPU and memory usage 30 seconds ahead.</p>
+                </div>
+                <div className="info-card">
+                  <span className="icon-wrapper pink"><Icons.AlertTriangle /></span>
+                  <h4>Exhaustion Detection</h4>
+                  <p>Predicts when resources will hit limits based on current consumption rate and available capacity.</p>
                 </div>
               </div>
             </div>

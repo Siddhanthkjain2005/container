@@ -36,7 +36,11 @@ class MetricsStorage:
     def __init__(self, max_rows_per_file: int = 10000):
         self.max_rows = max_rows_per_file
         self.csv_path = DATA_DIR / "metrics_history.csv"
+        self.anomaly_csv_path = DATA_DIR / "anomalies.csv"
+        self.summary_csv_path = DATA_DIR / "container_summary.csv"
         self._ensure_csv_exists()
+        self._ensure_anomaly_csv_exists()
+        self._ensure_summary_csv_exists()
     
     def _ensure_csv_exists(self):
         """Create CSV file with headers if it doesn't exist"""
@@ -46,12 +50,38 @@ class MetricsStorage:
                 writer.writerow([
                     'timestamp', 'datetime', 'container_id', 'container_name',
                     'cpu_percent', 'memory_bytes', 'memory_percent', 
-                    'memory_limit', 'pids', 'health_score'
+                    'memory_limit', 'pids', 'health_score', 'stability_score',
+                    'efficiency_score', 'is_stressed', 'cpu_rate', 'anomaly_count'
+                ])
+    
+    def _ensure_anomaly_csv_exists(self):
+        """Create anomaly CSV file with headers if it doesn't exist"""
+        if not self.anomaly_csv_path.exists():
+            with open(self.anomaly_csv_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    'timestamp', 'datetime', 'container_id', 'anomaly_type',
+                    'severity', 'value', 'expected', 'z_score', 'algorithm', 'message'
+                ])
+    
+    def _ensure_summary_csv_exists(self):
+        """Create summary CSV file with headers if it doesn't exist"""
+        if not self.summary_csv_path.exists():
+            with open(self.summary_csv_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    'timestamp', 'datetime', 'container_id', 'container_name',
+                    'cpu_avg', 'cpu_max', 'cpu_min', 'cpu_std', 'cpu_p95',
+                    'memory_avg', 'memory_max', 'memory_min', 'memory_p95',
+                    'health_score', 'stability_score', 'efficiency_score',
+                    'total_anomalies', 'stress_count', 'total_stress_time', 'uptime_seconds'
                 ])
     
     def store_metrics(self, container_id: str, container_name: str,
                       cpu_percent: float, memory_bytes: int, memory_percent: float,
-                      memory_limit: int, pids: int, health_score: float = 100.0):
+                      memory_limit: int, pids: int, health_score: float = 100.0,
+                      stability_score: float = 100.0, efficiency_score: float = 100.0,
+                      is_stressed: bool = False, cpu_rate: float = 0.0, anomaly_count: int = 0):
         """Store a metrics snapshot to CSV"""
         try:
             ts = time.time()
@@ -62,13 +92,53 @@ class MetricsStorage:
                 writer.writerow([
                     round(ts, 2), dt, container_id, container_name,
                     round(cpu_percent, 2), memory_bytes, round(memory_percent, 2),
-                    memory_limit, pids, round(health_score, 1)
+                    memory_limit, pids, round(health_score, 1), round(stability_score, 1),
+                    round(efficiency_score, 1), 1 if is_stressed else 0, round(cpu_rate, 2), anomaly_count
                 ])
             
             # Rotate file if too large
             self._rotate_if_needed()
         except Exception as e:
             print(f"Error storing metrics: {e}")
+    
+    def store_anomaly(self, container_id: str, anomaly: dict):
+        """Store an anomaly to the anomaly CSV"""
+        try:
+            ts = anomaly.get('timestamp', time.time())
+            dt = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+            
+            with open(self.anomaly_csv_path, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    round(ts, 2), dt, container_id, anomaly.get('type', 'unknown'),
+                    anomaly.get('severity', 'low'), anomaly.get('value', 0),
+                    anomaly.get('expected', 0), anomaly.get('z_score', 0),
+                    anomaly.get('algorithm', 'unknown'), anomaly.get('message', '')
+                ])
+        except Exception as e:
+            print(f"Error storing anomaly: {e}")
+    
+    def store_summary(self, container_id: str, container_name: str, analytics: dict):
+        """Store a container analytics summary snapshot"""
+        try:
+            ts = time.time()
+            dt = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+            
+            with open(self.summary_csv_path, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    round(ts, 2), dt, container_id, container_name,
+                    analytics.get('cpu_avg', 0), analytics.get('cpu_max', 0),
+                    analytics.get('cpu_min', 0), analytics.get('cpu_std', 0),
+                    analytics.get('cpu_p95', 0), analytics.get('memory_avg', 0),
+                    analytics.get('memory_max', 0), analytics.get('memory_min', 0),
+                    analytics.get('memory_p95', 0), analytics.get('health_score', 100),
+                    analytics.get('stability_score', 100), analytics.get('efficiency_score', 100),
+                    analytics.get('anomaly_count_total', 0), analytics.get('stress_count', 0),
+                    analytics.get('total_stress_time', 0), analytics.get('uptime_seconds', 0)
+                ])
+        except Exception as e:
+            print(f"Error storing summary: {e}")
     
     def _rotate_if_needed(self):
         """Rotate CSV if it exceeds max rows"""
@@ -107,11 +177,42 @@ class MetricsStorage:
                             'memory_bytes': int(row['memory_bytes']),
                             'memory_percent': float(row['memory_percent']),
                             'pids': int(row['pids']),
-                            'health_score': float(row['health_score'])
+                            'health_score': float(row.get('health_score', 100)),
+                            'stability_score': float(row.get('stability_score', 100)),
+                            'efficiency_score': float(row.get('efficiency_score', 100)),
+                            'is_stressed': bool(int(row.get('is_stressed', 0))),
+                            'cpu_rate': float(row.get('cpu_rate', 0)),
+                            'anomaly_count': int(row.get('anomaly_count', 0))
                         })
             return history[-limit:]
         except Exception as e:
             print(f"Error reading history: {e}")
+            return []
+    
+    def get_anomaly_history(self, container_id: str = None, limit: int = 100) -> List[dict]:
+        """Get anomaly history, optionally filtered by container"""
+        history = []
+        try:
+            if self.anomaly_csv_path.exists():
+                with open(self.anomaly_csv_path, 'r') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        if container_id is None or row['container_id'] == container_id:
+                            history.append({
+                                'timestamp': float(row['timestamp']),
+                                'datetime': row['datetime'],
+                                'container_id': row['container_id'],
+                                'anomaly_type': row['anomaly_type'],
+                                'severity': row['severity'],
+                                'value': float(row['value']) if row['value'] else 0,
+                                'expected': float(row['expected']) if row['expected'] else 0,
+                                'z_score': float(row['z_score']) if row['z_score'] else 0,
+                                'algorithm': row['algorithm'],
+                                'message': row['message']
+                            })
+            return history[-limit:]
+        except Exception as e:
+            print(f"Error reading anomaly history: {e}")
             return []
     
     def get_all_history(self, limit: int = 500) -> List[dict]:
@@ -131,6 +232,14 @@ class MetricsStorage:
         """Return path to CSV file for download"""
         return str(self.csv_path)
     
+    def export_anomaly_csv_path(self) -> str:
+        """Return path to anomaly CSV file for download"""
+        return str(self.anomaly_csv_path)
+    
+    def export_summary_csv_path(self) -> str:
+        """Return path to summary CSV file for download"""
+        return str(self.summary_csv_path)
+    
     def get_stats_summary(self, container_id: str) -> dict:
         """Get statistical summary for a container"""
         history = self.get_history(container_id, limit=1000)
@@ -140,20 +249,57 @@ class MetricsStorage:
         
         cpu_values = [h['cpu_percent'] for h in history]
         mem_values = [h['memory_bytes'] for h in history]
+        health_values = [h.get('health_score', 100) for h in history]
+        
+        # Calculate percentiles
+        sorted_cpu = sorted(cpu_values)
+        sorted_mem = sorted(mem_values)
+        p50_idx = len(sorted_cpu) // 2
+        p95_idx = int(len(sorted_cpu) * 0.95)
+        p99_idx = int(len(sorted_cpu) * 0.99)
+        
+        # Calculate standard deviation
+        cpu_avg = sum(cpu_values) / len(cpu_values)
+        cpu_variance = sum((x - cpu_avg) ** 2 for x in cpu_values) / len(cpu_values)
+        cpu_std = cpu_variance ** 0.5
+        
+        # Stress analysis
+        stressed_count = sum(1 for h in history if h.get('is_stressed', False))
+        stress_ratio = stressed_count / len(history) if history else 0
         
         return {
             "container_id": container_id,
             "data_points": len(history),
             "time_range_seconds": history[-1]['timestamp'] - history[0]['timestamp'] if len(history) > 1 else 0,
+            "start_time": history[0]['datetime'] if history else None,
+            "end_time": history[-1]['datetime'] if history else None,
             "cpu": {
-                "avg": sum(cpu_values) / len(cpu_values),
-                "max": max(cpu_values),
-                "min": min(cpu_values)
+                "avg": round(cpu_avg, 2),
+                "max": round(max(cpu_values), 2),
+                "min": round(min(cpu_values), 2),
+                "std": round(cpu_std, 2),
+                "p50": round(sorted_cpu[p50_idx], 2) if sorted_cpu else 0,
+                "p95": round(sorted_cpu[p95_idx], 2) if len(sorted_cpu) > p95_idx else 0,
+                "p99": round(sorted_cpu[p99_idx], 2) if len(sorted_cpu) > p99_idx else 0,
             },
             "memory": {
-                "avg": sum(mem_values) / len(mem_values),
+                "avg": int(sum(mem_values) / len(mem_values)),
+                "avg_mb": round(sum(mem_values) / len(mem_values) / (1024*1024), 2),
                 "max": max(mem_values),
-                "min": min(mem_values)
+                "max_mb": round(max(mem_values) / (1024*1024), 2),
+                "min": min(mem_values),
+                "min_mb": round(min(mem_values) / (1024*1024), 2),
+                "p50": sorted_mem[p50_idx] if sorted_mem else 0,
+                "p95": sorted_mem[p95_idx] if len(sorted_mem) > p95_idx else 0,
+            },
+            "health": {
+                "avg": round(sum(health_values) / len(health_values), 1),
+                "min": round(min(health_values), 1),
+                "current": round(health_values[-1], 1) if health_values else 100,
+            },
+            "stress": {
+                "stress_count": stressed_count,
+                "stress_ratio": round(stress_ratio * 100, 1),  # percentage of time stressed
             }
         }
 

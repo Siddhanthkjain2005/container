@@ -222,19 +222,44 @@ async def metrics_broadcast_task():
                 }
                 
                 # Feed metrics to ML anomaly detector (only for running containers)
-                detector.add_metrics(cid, cpu_percent, mem, mem_limit)
+                anomalies = detector.add_metrics(cid, cpu_percent, mem, mem_limit)
                 
-                # Store to CSV for history
+                # Store anomalies to CSV
+                for anomaly in anomalies:
+                    metrics_storage.store_anomaly(cid, anomaly)
+                
+                # Get analytics for this container
+                analytics = detector.get_container_analytics(cid)
+                
+                # Store to CSV for history with enhanced data
                 container_name = next((c["name"] for c in containers if c["id"] == cid), cid)
-                health = detector.get_container_analytics(cid).get("health_score", 100)
                 metrics_storage.store_metrics(
                     cid, container_name, cpu_percent, mem,
                     (mem / mem_limit * 100) if mem_limit > 0 else 0,
-                    mem_limit, pids, health
+                    mem_limit, pids, 
+                    health_score=analytics.get("health_score", 100),
+                    stability_score=analytics.get("stability_score", 100),
+                    efficiency_score=analytics.get("efficiency_score", 100),
+                    is_stressed=analytics.get("is_stressed", False),
+                    cpu_rate=analytics.get("cpu_rate", 0),
+                    anomaly_count=analytics.get("anomaly_count_recent", 0)
                 )
             
             # Get anomalies for broadcast
             all_analytics = detector.get_all_analytics()
+            
+            # Build enhanced payload for frontend
+            container_analytics = {}
+            for cid in metrics_by_id:
+                a = detector.get_container_analytics(cid)
+                container_analytics[cid] = {
+                    "health_score": a.get("health_score", 100),
+                    "stability_score": a.get("stability_score", 100),
+                    "efficiency_score": a.get("efficiency_score", 100),
+                    "is_stressed": a.get("is_stressed", False),
+                    "trend": a.get("trend", {}),
+                    "prediction": a.get("prediction", {})
+                }
             
             payload = {
                 "type": "metrics",
@@ -242,7 +267,11 @@ async def metrics_broadcast_task():
                 "containers": containers,
                 "metrics": metrics_by_id,
                 "anomalies": all_analytics.get("global_anomalies", [])[-5:],
-                "health_scores": {cid: detector.get_container_analytics(cid).get("health_score", 100) for cid in metrics_by_id}
+                "health_scores": {cid: container_analytics[cid]["health_score"] for cid in container_analytics},
+                "stability_scores": {cid: container_analytics[cid]["stability_score"] for cid in container_analytics},
+                "efficiency_scores": {cid: container_analytics[cid]["efficiency_score"] for cid in container_analytics},
+                "container_analytics": container_analytics,
+                "system_stats": all_analytics.get("system_stats", {})
             }
             await ws_manager.broadcast(payload)
         await asyncio.sleep(1)
@@ -526,7 +555,54 @@ def get_anomalies():
     analytics = detector.get_all_analytics()
     return {
         "anomalies": analytics.get("global_anomalies", []),
-        "total": analytics.get("total_anomalies", 0)
+        "total": analytics.get("total_anomalies", 0),
+        "analysis": analytics.get("anomaly_analysis", {})
+    }
+
+@app.get("/api/anomalies/history")
+def get_anomaly_history(container_id: str = None, limit: int = 100):
+    """Get anomaly history from CSV storage"""
+    history = metrics_storage.get_anomaly_history(container_id, limit)
+    return {
+        "container_id": container_id,
+        "data_points": len(history),
+        "history": history
+    }
+
+@app.get("/api/system/stats")
+def get_system_stats():
+    """Get system-wide statistics and health metrics"""
+    analytics = detector.get_all_analytics()
+    return {
+        "system_stats": analytics.get("system_stats", {}),
+        "anomaly_analysis": analytics.get("anomaly_analysis", {}),
+        "active_containers": analytics.get("active_containers", 0),
+        "system_uptime": analytics.get("system_uptime", 0),
+        "timestamp": analytics.get("timestamp", 0)
+    }
+
+@app.get("/api/containers/{container_id}/distribution")
+def get_container_distribution(container_id: str):
+    """Get CPU and memory distribution data for histograms"""
+    analytics = detector.get_container_analytics(container_id)
+    return {
+        "container_id": container_id,
+        "cpu_distribution": analytics.get("cpu_distribution", {}),
+        "memory_distribution": analytics.get("memory_distribution", {})
+    }
+
+@app.get("/api/containers/{container_id}/trends")
+def get_container_trends(container_id: str):
+    """Get trend and prediction data for a container"""
+    analytics = detector.get_container_analytics(container_id)
+    return {
+        "container_id": container_id,
+        "cpu_trend": analytics.get("trend", {}),
+        "memory_trend": analytics.get("memory_trend", {}),
+        "cpu_prediction": analytics.get("prediction", {}),
+        "memory_prediction": analytics.get("memory_prediction", {}),
+        "cpu_rate": analytics.get("cpu_rate", 0),
+        "memory_rate": analytics.get("memory_rate", 0)
     }
 
 # ============== Process & Stats Endpoints ==============
@@ -580,7 +656,7 @@ def get_all_history(limit: int = 500):
 
 @app.get("/api/export/csv")
 def export_csv():
-    """Get path to CSV file for download"""
+    """Export metrics CSV file for download"""
     csv_path = metrics_storage.export_csv_path()
     if Path(csv_path).exists():
         return FileResponse(
@@ -589,3 +665,27 @@ def export_csv():
             filename="minicontainer_metrics.csv"
         )
     raise HTTPException(status_code=404, detail="No data available yet")
+
+@app.get("/api/export/anomalies")
+def export_anomalies_csv():
+    """Export anomalies CSV file for download"""
+    csv_path = metrics_storage.export_anomaly_csv_path()
+    if Path(csv_path).exists():
+        return FileResponse(
+            csv_path, 
+            media_type="text/csv",
+            filename="minicontainer_anomalies.csv"
+        )
+    raise HTTPException(status_code=404, detail="No anomaly data available yet")
+
+@app.get("/api/export/summary")
+def export_summary_csv():
+    """Export container summary CSV file for download"""
+    csv_path = metrics_storage.export_summary_csv_path()
+    if Path(csv_path).exists():
+        return FileResponse(
+            csv_path, 
+            media_type="text/csv",
+            filename="minicontainer_summary.csv"
+        )
+    raise HTTPException(status_code=404, detail="No summary data available yet")

@@ -23,6 +23,10 @@ class ContainerStats:
     mem_history: deque = field(default_factory=lambda: deque(maxlen=120))
     timestamps: deque = field(default_factory=lambda: deque(maxlen=120))
     
+    # Extended history for long-term analysis (last 600 samples = 10 minutes)
+    cpu_history_long: deque = field(default_factory=lambda: deque(maxlen=600))
+    mem_history_long: deque = field(default_factory=lambda: deque(maxlen=600))
+    
     # Anomaly tracking
     anomalies: List[dict] = field(default_factory=list)
     
@@ -32,18 +36,37 @@ class ContainerStats:
     cpu_ema_variance: float = 0.0
     mem_ema_variance: float = 0.0
     
+    # Secondary EMA for trend detection (slower response)
+    cpu_ema_slow: float = 0.0
+    mem_ema_slow: float = 0.0
+    
     # Health metrics
     health_score: float = 100.0
     stability_score: float = 100.0
+    efficiency_score: float = 100.0
     
     # Pattern detection
     is_stressed: bool = False
     stress_start_time: Optional[float] = None
     stress_duration: float = 0.0
+    total_stress_time: float = 0.0
+    stress_count: int = 0
+    
+    # Peak tracking
+    cpu_peak: float = 0.0
+    mem_peak: int = 0
+    cpu_peak_time: Optional[float] = None
+    mem_peak_time: Optional[float] = None
     
     # Learning state
     samples_collected: int = 0
     baseline_learned: bool = False
+    
+    # Rate of change tracking
+    cpu_rate: float = 0.0
+    mem_rate: float = 0.0
+    prev_cpu: float = 0.0
+    prev_mem: int = 0
 
 
 class EnhancedAnomalyDetector:
@@ -59,6 +82,7 @@ class EnhancedAnomalyDetector:
     def __init__(self, 
                  base_z_threshold: float = 2.0,
                  ema_alpha: float = 0.3,
+                 ema_alpha_slow: float = 0.1,
                  min_samples: int = 5,
                  stress_threshold_cpu: float = 70.0,
                  stress_threshold_mem_percent: float = 80.0):
@@ -68,18 +92,21 @@ class EnhancedAnomalyDetector:
         Args:
             base_z_threshold: Base Z-score threshold (adjusted adaptively)
             ema_alpha: EMA smoothing factor (0-1, higher = more reactive)
+            ema_alpha_slow: Slow EMA for trend detection (lower = smoother)
             min_samples: Minimum samples before detection starts
             stress_threshold_cpu: CPU % to consider as stressed
             stress_threshold_mem_percent: Memory % to consider as stressed
         """
         self.base_z_threshold = base_z_threshold
         self.ema_alpha = ema_alpha
+        self.ema_alpha_slow = ema_alpha_slow
         self.min_samples = min_samples
         self.stress_threshold_cpu = stress_threshold_cpu
         self.stress_threshold_mem = stress_threshold_mem_percent
         
         self.container_stats: Dict[str, ContainerStats] = {}
         self.global_anomalies: List[dict] = []
+        self.system_start_time: float = time.time()
     
     def _get_stats(self, container_id: str) -> ContainerStats:
         """Get or create stats for a container"""
@@ -177,16 +204,41 @@ class EnhancedAnomalyDetector:
         stats.samples_collected += 1
         is_first = stats.samples_collected == 1
         
-        # Update EMAs
+        # Update EMAs (fast and slow)
         stats.cpu_ema = self._update_ema(cpu_percent, stats.cpu_ema, is_first)
         stats.mem_ema = self._update_ema(memory_bytes, stats.mem_ema, is_first)
         stats.cpu_ema_variance = self._update_ema_variance(cpu_percent, stats.cpu_ema, stats.cpu_ema_variance, is_first)
         stats.mem_ema_variance = self._update_ema_variance(memory_bytes, stats.mem_ema, stats.mem_ema_variance, is_first)
         
-        # Add to history
+        # Slow EMAs for trend detection
+        if is_first:
+            stats.cpu_ema_slow = cpu_percent
+            stats.mem_ema_slow = memory_bytes
+        else:
+            stats.cpu_ema_slow = self.ema_alpha_slow * cpu_percent + (1 - self.ema_alpha_slow) * stats.cpu_ema_slow
+            stats.mem_ema_slow = self.ema_alpha_slow * memory_bytes + (1 - self.ema_alpha_slow) * stats.mem_ema_slow
+        
+        # Rate of change calculation
+        if not is_first:
+            stats.cpu_rate = cpu_percent - stats.prev_cpu
+            stats.mem_rate = memory_bytes - stats.prev_mem
+        stats.prev_cpu = cpu_percent
+        stats.prev_mem = memory_bytes
+        
+        # Peak tracking
+        if cpu_percent > stats.cpu_peak:
+            stats.cpu_peak = cpu_percent
+            stats.cpu_peak_time = current_time
+        if memory_bytes > stats.mem_peak:
+            stats.mem_peak = memory_bytes
+            stats.mem_peak_time = current_time
+        
+        # Add to history (short and long term)
         stats.cpu_history.append(cpu_percent)
         stats.mem_history.append(memory_bytes)
         stats.timestamps.append(current_time)
+        stats.cpu_history_long.append(cpu_percent)
+        stats.mem_history_long.append(memory_bytes)
         
         # Mark baseline as learned after minimum samples
         if stats.samples_collected >= self.min_samples and not stats.baseline_learned:
@@ -268,9 +320,12 @@ class EnhancedAnomalyDetector:
         if is_stressed and not stats.is_stressed:
             stats.is_stressed = True
             stats.stress_start_time = current_time
+            stats.stress_count += 1
         elif not is_stressed and stats.is_stressed:
             if stats.stress_start_time:
-                stats.stress_duration = current_time - stats.stress_start_time
+                duration = current_time - stats.stress_start_time
+                stats.stress_duration = duration
+                stats.total_stress_time += duration
             stats.is_stressed = False
             stats.stress_start_time = None
         
@@ -279,9 +334,10 @@ class EnhancedAnomalyDetector:
             stats.anomalies.append(anomaly)
             self.global_anomalies.append(anomaly)
         
-        # Calculate health score
+        # Calculate all scores
         stats.health_score = self._calculate_health_score(stats, cpu_percent, memory_bytes, memory_limit)
         stats.stability_score = self._calculate_stability_score(stats)
+        stats.efficiency_score = self._calculate_efficiency_score(stats, cpu_percent, memory_bytes, memory_limit)
         
         # Cleanup old anomalies
         self._cleanup_old_anomalies(stats)
@@ -341,6 +397,44 @@ class EnhancedAnomalyDetector:
         
         return max(0, min(100, score))
     
+    def _calculate_efficiency_score(self, stats: ContainerStats, cpu: float, mem: int, mem_limit: int) -> float:
+        """Calculate resource efficiency score (0-100)
+        
+        Efficiency considers:
+        - Resource utilization (using some resources is good, but not too much)
+        - Stability of usage patterns
+        - Rate of resource consumption
+        """
+        if stats.samples_collected < 5:
+            return 100.0
+        
+        score = 100.0
+        
+        # Optimal CPU usage is around 20-60%, penalize extremes
+        if cpu < 1:  # Idle container
+            score -= 10
+        elif cpu > 80:  # Overloaded
+            score -= (cpu - 80) * 1.5
+        
+        # Memory efficiency
+        mem_percent = (mem / mem_limit * 100) if mem_limit > 0 else 0
+        if mem_percent < 5:  # Barely using memory
+            score -= 5
+        elif mem_percent > 85:  # Memory pressure
+            score -= (mem_percent - 85) * 2
+        
+        # Penalize high volatility (rapid changes)
+        if abs(stats.cpu_rate) > 20:  # More than 20% change per second
+            score -= 15
+        
+        # Reward consistent usage patterns
+        if stats.samples_collected > 30:
+            cpu_std = math.sqrt(stats.cpu_ema_variance)
+            if cpu_std < 5:  # Very stable
+                score += 5
+        
+        return max(0, min(100, score))
+    
     def _cleanup_old_anomalies(self, stats: ContainerStats):
         """Keep only recent anomalies"""
         if len(stats.anomalies) > 100:
@@ -354,26 +448,162 @@ class EnhancedAnomalyDetector:
         
         cpu_list = list(stats.cpu_history)
         mem_list = list(stats.mem_history)
+        cpu_list_long = list(stats.cpu_history_long)
+        mem_list_long = list(stats.mem_history_long)
+        
+        # Calculate percentiles
+        cpu_p50 = sorted(cpu_list)[len(cpu_list)//2] if cpu_list else 0
+        cpu_p95 = sorted(cpu_list)[int(len(cpu_list)*0.95)] if len(cpu_list) > 20 else (max(cpu_list) if cpu_list else 0)
+        cpu_p99 = sorted(cpu_list)[int(len(cpu_list)*0.99)] if len(cpu_list) > 100 else (max(cpu_list) if cpu_list else 0)
+        
+        mem_p50 = sorted(mem_list)[len(mem_list)//2] if mem_list else 0
+        mem_p95 = sorted(mem_list)[int(len(mem_list)*0.95)] if len(mem_list) > 20 else (max(mem_list) if mem_list else 0)
+        
+        # Uptime since first sample
+        uptime = time.time() - stats.timestamps[0] if stats.timestamps else 0
         
         return {
             "container_id": container_id,
+            # Scores
             "health_score": round(stats.health_score, 1),
             "stability_score": round(stats.stability_score, 1),
+            "efficiency_score": round(stats.efficiency_score, 1),
+            # CPU metrics
             "cpu_current": round(cpu_list[-1], 2) if cpu_list else 0,
             "cpu_avg": round(stats.cpu_ema, 2),
             "cpu_max": round(max(cpu_list), 2) if cpu_list else 0,
+            "cpu_min": round(min(cpu_list), 2) if cpu_list else 0,
             "cpu_std": round(math.sqrt(stats.cpu_ema_variance), 2),
+            "cpu_peak": round(stats.cpu_peak, 2),
+            "cpu_peak_time": stats.cpu_peak_time,
+            "cpu_p50": round(cpu_p50, 2),
+            "cpu_p95": round(cpu_p95, 2),
+            "cpu_p99": round(cpu_p99, 2),
+            "cpu_rate": round(stats.cpu_rate, 2),
+            "cpu_ema_slow": round(stats.cpu_ema_slow, 2),
+            # Memory metrics
             "memory_current": mem_list[-1] if mem_list else 0,
             "memory_avg": int(stats.mem_ema),
             "memory_max": max(mem_list) if mem_list else 0,
+            "memory_min": min(mem_list) if mem_list else 0,
+            "memory_peak": stats.mem_peak,
+            "memory_peak_time": stats.mem_peak_time,
+            "memory_p50": mem_p50,
+            "memory_p95": mem_p95,
+            "memory_rate": stats.mem_rate,
+            # Stress metrics
             "is_stressed": stats.is_stressed,
+            "stress_count": stats.stress_count,
+            "total_stress_time": round(stats.total_stress_time, 1),
+            "current_stress_duration": round(time.time() - stats.stress_start_time, 1) if stats.is_stressed and stats.stress_start_time else 0,
+            # Learning state
             "baseline_learned": stats.baseline_learned,
             "samples_collected": stats.samples_collected,
+            "uptime_seconds": round(uptime, 1),
+            # Anomalies
             "anomaly_count_total": len(stats.anomalies),
             "anomaly_count_recent": len([a for a in stats.anomalies if time.time() - a["timestamp"] < 120]),
             "recent_anomalies": stats.anomalies[-10:],
+            # Predictions and trends
             "trend": self._get_trend(stats),
-            "prediction": self._predict_cpu(stats)
+            "memory_trend": self._get_memory_trend(stats),
+            "prediction": self._predict_cpu(stats),
+            "memory_prediction": self._predict_memory(stats),
+            # Distribution data for charts
+            "cpu_distribution": self._get_distribution(cpu_list_long if cpu_list_long else cpu_list, 10),
+            "memory_distribution": self._get_distribution([m / (1024*1024) for m in (mem_list_long if mem_list_long else mem_list)], 10),
+        }
+    
+    def _get_distribution(self, values: list, buckets: int = 10) -> dict:
+        """Calculate distribution of values for histogram"""
+        if not values:
+            return {"buckets": [], "counts": [], "labels": []}
+        
+        min_val = min(values)
+        max_val = max(values)
+        if max_val == min_val:
+            return {"buckets": [min_val], "counts": [len(values)], "labels": [f"{min_val:.1f}"]}
+        
+        bucket_size = (max_val - min_val) / buckets
+        bucket_counts = [0] * buckets
+        bucket_labels = []
+        
+        for i in range(buckets):
+            start = min_val + i * bucket_size
+            end = start + bucket_size
+            bucket_labels.append(f"{start:.1f}-{end:.1f}")
+        
+        for v in values:
+            idx = min(int((v - min_val) / bucket_size), buckets - 1)
+            bucket_counts[idx] += 1
+        
+        return {
+            "buckets": [min_val + (i + 0.5) * bucket_size for i in range(buckets)],
+            "counts": bucket_counts,
+            "labels": bucket_labels
+        }
+    
+    def _get_memory_trend(self, stats: ContainerStats) -> dict:
+        """Determine memory usage trend"""
+        if len(stats.mem_history) < 10:
+            return {"direction": "stable", "strength": 0, "description": "Insufficient data"}
+        
+        recent = list(stats.mem_history)[-10:]
+        older = list(stats.mem_history)[-20:-10] if len(stats.mem_history) >= 20 else recent
+        
+        recent_avg = sum(recent) / len(recent)
+        older_avg = sum(older) / len(older)
+        
+        if older_avg == 0:
+            return {"direction": "stable", "strength": 0, "description": "No baseline"}
+        
+        diff_percent = ((recent_avg - older_avg) / older_avg) * 100
+        
+        if diff_percent > 20:
+            return {"direction": "increasing", "strength": min(diff_percent / 20, 3), "description": "Rapidly increasing", "change_percent": round(diff_percent, 1)}
+        elif diff_percent > 5:
+            return {"direction": "increasing", "strength": diff_percent / 20, "description": "Gradually increasing", "change_percent": round(diff_percent, 1)}
+        elif diff_percent < -20:
+            return {"direction": "decreasing", "strength": min(abs(diff_percent) / 20, 3), "description": "Rapidly decreasing", "change_percent": round(diff_percent, 1)}
+        elif diff_percent < -5:
+            return {"direction": "decreasing", "strength": abs(diff_percent) / 20, "description": "Gradually decreasing", "change_percent": round(diff_percent, 1)}
+        return {"direction": "stable", "strength": 0, "description": "Stable usage", "change_percent": round(diff_percent, 1)}
+    
+    def _predict_memory(self, stats: ContainerStats) -> dict:
+        """Predict future memory usage"""
+        if len(stats.mem_history) < 10:
+            return {"value": 0, "confidence": 0, "method": "insufficient_data"}
+        
+        mem_list = list(stats.mem_history)[-30:]
+        n = len(mem_list)
+        
+        # Linear regression
+        x_mean = n / 2
+        y_mean = sum(mem_list) / n
+        
+        numerator = sum((i - x_mean) * (mem_list[i] - y_mean) for i in range(n))
+        denominator = sum((i - x_mean) ** 2 for i in range(n))
+        
+        slope = numerator / denominator if denominator != 0 else 0
+        intercept = y_mean - slope * x_mean
+        
+        # Predict 30 seconds ahead
+        future_x = n + 30
+        predicted = intercept + slope * future_x
+        predicted = max(0, predicted)
+        
+        # Confidence
+        ss_tot = sum((mem_list[i] - y_mean) ** 2 for i in range(n))
+        ss_res = sum((mem_list[i] - (intercept + slope * i)) ** 2 for i in range(n))
+        r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+        confidence = r_squared * min(n / 30, 1)
+        
+        return {
+            "value": int(predicted),
+            "value_mb": round(predicted / (1024*1024), 2),
+            "confidence": round(confidence, 2),
+            "method": "linear_regression",
+            "slope_per_sec": round(slope, 0)
         }
     
     def _get_trend(self, stats: ContainerStats) -> dict:
@@ -435,16 +665,59 @@ class EnhancedAnomalyDetector:
         }
     
     def get_all_analytics(self) -> dict:
-        """Get analytics for all containers"""
+        """Get analytics for all containers with system-wide stats"""
+        container_analytics = {
+            cid: self.get_container_analytics(cid) 
+            for cid in self.container_stats
+        }
+        
+        # Calculate system-wide aggregates
+        total_cpu = sum(a.get("cpu_current", 0) for a in container_analytics.values())
+        total_memory = sum(a.get("memory_current", 0) for a in container_analytics.values())
+        avg_health = sum(a.get("health_score", 100) for a in container_analytics.values()) / max(len(container_analytics), 1)
+        avg_stability = sum(a.get("stability_score", 100) for a in container_analytics.values()) / max(len(container_analytics), 1)
+        avg_efficiency = sum(a.get("efficiency_score", 100) for a in container_analytics.values()) / max(len(container_analytics), 1)
+        
+        stressed_count = sum(1 for a in container_analytics.values() if a.get("is_stressed", False))
+        unhealthy_count = sum(1 for a in container_analytics.values() if a.get("health_score", 100) < 70)
+        
+        # Anomaly breakdown by type
+        anomaly_types = {}
+        for a in self.global_anomalies[-100:]:
+            atype = a.get("type", "unknown")
+            anomaly_types[atype] = anomaly_types.get(atype, 0) + 1
+        
+        # Anomaly breakdown by severity
+        severity_counts = {"high": 0, "medium": 0, "low": 0}
+        for a in self.global_anomalies[-100:]:
+            sev = a.get("severity", "low")
+            severity_counts[sev] = severity_counts.get(sev, 0) + 1
+        
         return {
-            "containers": {
-                cid: self.get_container_analytics(cid) 
-                for cid in self.container_stats
-            },
+            "containers": container_analytics,
             "global_anomalies": self.global_anomalies[-50:],
             "total_anomalies": len(self.global_anomalies),
             "active_containers": len(self.container_stats),
-            "timestamp": time.time()
+            "timestamp": time.time(),
+            "system_uptime": time.time() - self.system_start_time,
+            # System-wide metrics
+            "system_stats": {
+                "total_cpu_percent": round(total_cpu, 2),
+                "total_memory_bytes": total_memory,
+                "total_memory_mb": round(total_memory / (1024*1024), 2),
+                "average_health_score": round(avg_health, 1),
+                "average_stability_score": round(avg_stability, 1),
+                "average_efficiency_score": round(avg_efficiency, 1),
+                "stressed_containers": stressed_count,
+                "unhealthy_containers": unhealthy_count,
+                "healthy_containers": len(container_analytics) - unhealthy_count,
+            },
+            # Anomaly analysis
+            "anomaly_analysis": {
+                "by_type": anomaly_types,
+                "by_severity": severity_counts,
+                "recent_rate": len([a for a in self.global_anomalies if time.time() - a.get("timestamp", 0) < 300]) / 5,  # per minute over last 5 min
+            }
         }
     
     def predict_usage(self, container_id: str, minutes_ahead: int = 5) -> dict:
@@ -460,25 +733,46 @@ class EnhancedAnomalyDetector:
             }
         
         cpu_pred = self._predict_cpu(stats)
+        mem_pred = self._predict_memory(stats)
         
         return {
             "cpu_predicted": cpu_pred["value"],
-            "memory_predicted": int(stats.mem_ema),
-            "confidence": cpu_pred["confidence"],
-            "trend": cpu_pred["slope"],
-            "method": "linear_regression"
+            "cpu_confidence": cpu_pred["confidence"],
+            "cpu_slope": cpu_pred.get("slope", 0),
+            "memory_predicted": mem_pred["value"],
+            "memory_predicted_mb": mem_pred.get("value_mb", 0),
+            "memory_confidence": mem_pred["confidence"],
+            "memory_slope_per_sec": mem_pred.get("slope_per_sec", 0),
+            "confidence": (cpu_pred["confidence"] + mem_pred["confidence"]) / 2,
+            "trend": self._get_trend(stats),
+            "memory_trend": self._get_memory_trend(stats),
+            "method": "linear_regression",
+            "prediction_horizon_seconds": 30
         }
     
     def reset_container(self, container_id: str):
         """Reset stats for a container (e.g., after restart)"""
         if container_id in self.container_stats:
             del self.container_stats[container_id]
+    
+    def get_container_history_data(self, container_id: str) -> dict:
+        """Get raw history data for charts"""
+        stats = self._get_stats(container_id)
+        return {
+            "container_id": container_id,
+            "cpu_history": list(stats.cpu_history),
+            "mem_history": [m / (1024*1024) for m in stats.mem_history],  # Convert to MB
+            "timestamps": list(stats.timestamps),
+            "cpu_history_long": list(stats.cpu_history_long),
+            "mem_history_long": [m / (1024*1024) for m in stats.mem_history_long],
+        }
 
 
 # Global detector instance with tuned parameters
 detector = EnhancedAnomalyDetector(
     base_z_threshold=2.0,      # Base threshold
     ema_alpha=0.3,             # Responsive EMA
+    ema_alpha_slow=0.1,        # Slow EMA for trend detection
     min_samples=5,             # Quick baseline learning
     stress_threshold_cpu=70.0  # CPU stress threshold
 )
