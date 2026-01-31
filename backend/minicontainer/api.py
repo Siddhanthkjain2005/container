@@ -259,18 +259,31 @@ async def metrics_broadcast_task():
             # Get anomalies for broadcast
             all_analytics = detector.get_all_analytics()
             
-            # Build enhanced payload for frontend
+            # Build enhanced payload for frontend - include ALL containers
             container_analytics = {}
-            for cid in metrics_by_id:
-                a = detector.get_container_analytics(cid)
-                container_analytics[cid] = {
-                    "health_score": a.get("health_score", 100),
-                    "stability_score": a.get("stability_score", 100),
-                    "efficiency_score": a.get("efficiency_score", 100),
-                    "is_stressed": a.get("is_stressed", False),
-                    "trend": a.get("trend", {}),
-                    "prediction": a.get("prediction", {})
-                }
+            for c in containers:
+                cid = c["id"]
+                if c.get("state") == "running" and cid in metrics_by_id:
+                    # Running container - get actual analytics
+                    a = detector.get_container_analytics(cid)
+                    container_analytics[cid] = {
+                        "health_score": a.get("health_score", 100),
+                        "stability_score": a.get("stability_score", 100),
+                        "efficiency_score": a.get("efficiency_score", 100),
+                        "is_stressed": a.get("is_stressed", False),
+                        "trend": a.get("trend", {}),
+                        "prediction": a.get("prediction", {})
+                    }
+                else:
+                    # Stopped container - reset to defaults (100)
+                    container_analytics[cid] = {
+                        "health_score": 100,
+                        "stability_score": 100,
+                        "efficiency_score": 100,
+                        "is_stressed": False,
+                        "trend": {"direction": "stable", "description": "Container stopped"},
+                        "prediction": {"value": 0, "confidence": 0}
+                    }
             
             payload = {
                 "type": "metrics",
