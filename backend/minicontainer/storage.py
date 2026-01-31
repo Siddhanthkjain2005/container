@@ -6,6 +6,7 @@ CSV-based storage for historical metrics data and process information retrieval.
 import csv
 import os
 import time
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 from dataclasses import dataclass
@@ -13,6 +14,17 @@ from dataclasses import dataclass
 # Storage directory for CSV files
 DATA_DIR = Path("/tmp/minicontainer/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# IST timezone (UTC+5:30)
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def get_ist_datetime(ts: float = None) -> str:
+    """Convert timestamp to IST datetime string"""
+    if ts is None:
+        ts = time.time()
+    dt = datetime.fromtimestamp(ts, tz=IST)
+    return dt.strftime('%Y-%m-%d %H:%M:%S IST')
 
 
 @dataclass
@@ -48,10 +60,11 @@ class MetricsStorage:
             with open(self.csv_path, 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow([
-                    'timestamp', 'datetime', 'container_id', 'container_name',
-                    'cpu_percent', 'memory_bytes', 'memory_percent', 
-                    'memory_limit', 'pids', 'health_score', 'stability_score',
-                    'efficiency_score', 'is_stressed', 'cpu_rate', 'anomaly_count'
+                    'timestamp_unix', 'datetime_IST', 'container_id', 'container_name',
+                    'cpu_usage_percent', 'memory_used_bytes', 'memory_usage_percent', 
+                    'memory_limit_bytes', 'process_count', 'health_score_0_100', 
+                    'stability_score_0_100', 'efficiency_score_0_100', 
+                    'is_stressed_flag', 'cpu_rate_of_change', 'anomaly_count'
                 ])
     
     def _ensure_anomaly_csv_exists(self):
@@ -60,8 +73,9 @@ class MetricsStorage:
             with open(self.anomaly_csv_path, 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow([
-                    'timestamp', 'datetime', 'container_id', 'anomaly_type',
-                    'severity', 'value', 'expected', 'z_score', 'algorithm', 'message'
+                    'timestamp_unix', 'datetime_IST', 'container_id', 'anomaly_type',
+                    'severity_level', 'actual_value', 'expected_value', 'z_score', 
+                    'detection_algorithm', 'description'
                 ])
     
     def _ensure_summary_csv_exists(self):
@@ -70,11 +84,14 @@ class MetricsStorage:
             with open(self.summary_csv_path, 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow([
-                    'timestamp', 'datetime', 'container_id', 'container_name',
-                    'cpu_avg', 'cpu_max', 'cpu_min', 'cpu_std', 'cpu_p95',
-                    'memory_avg', 'memory_max', 'memory_min', 'memory_p95',
-                    'health_score', 'stability_score', 'efficiency_score',
-                    'total_anomalies', 'stress_count', 'total_stress_time', 'uptime_seconds'
+                    'timestamp_unix', 'datetime_IST', 'container_id', 'container_name',
+                    'cpu_average_percent', 'cpu_max_percent', 'cpu_min_percent', 
+                    'cpu_std_deviation', 'cpu_95th_percentile',
+                    'memory_average_bytes', 'memory_max_bytes', 'memory_min_bytes', 
+                    'memory_95th_percentile',
+                    'health_score_0_100', 'stability_score_0_100', 'efficiency_score_0_100',
+                    'total_anomalies_detected', 'stress_event_count', 
+                    'total_stress_duration_sec', 'container_uptime_sec'
                 ])
     
     def store_metrics(self, container_id: str, container_name: str,
@@ -85,7 +102,7 @@ class MetricsStorage:
         """Store a metrics snapshot to CSV"""
         try:
             ts = time.time()
-            dt = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+            dt = get_ist_datetime(ts)
             
             with open(self.csv_path, 'a', newline='') as f:
                 writer = csv.writer(f)
@@ -105,7 +122,7 @@ class MetricsStorage:
         """Store an anomaly to the anomaly CSV"""
         try:
             ts = anomaly.get('timestamp', time.time())
-            dt = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+            dt = get_ist_datetime(ts)
             
             with open(self.anomaly_csv_path, 'a', newline='') as f:
                 writer = csv.writer(f)
@@ -122,7 +139,7 @@ class MetricsStorage:
         """Store a container analytics summary snapshot"""
         try:
             ts = time.time()
-            dt = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+            dt = get_ist_datetime(ts)
             
             with open(self.summary_csv_path, 'a', newline='') as f:
                 writer = csv.writer(f)
@@ -170,18 +187,19 @@ class MetricsStorage:
                 reader = csv.DictReader(f)
                 for row in reader:
                     if row['container_id'] == container_id:
+                        # Handle both old and new column names for compatibility
                         history.append({
-                            'timestamp': float(row['timestamp']),
-                            'datetime': row['datetime'],
-                            'cpu_percent': float(row['cpu_percent']),
-                            'memory_bytes': int(row['memory_bytes']),
-                            'memory_percent': float(row['memory_percent']),
-                            'pids': int(row['pids']),
-                            'health_score': float(row.get('health_score', 100)),
-                            'stability_score': float(row.get('stability_score', 100)),
-                            'efficiency_score': float(row.get('efficiency_score', 100)),
-                            'is_stressed': bool(int(row.get('is_stressed', 0))),
-                            'cpu_rate': float(row.get('cpu_rate', 0)),
+                            'timestamp': float(row.get('timestamp_unix') or row.get('timestamp', 0)),
+                            'datetime': row.get('datetime_IST') or row.get('datetime', ''),
+                            'cpu_percent': float(row.get('cpu_usage_percent') or row.get('cpu_percent', 0)),
+                            'memory_bytes': int(row.get('memory_used_bytes') or row.get('memory_bytes', 0)),
+                            'memory_percent': float(row.get('memory_usage_percent') or row.get('memory_percent', 0)),
+                            'pids': int(row.get('process_count') or row.get('pids', 0)),
+                            'health_score': float(row.get('health_score_0_100') or row.get('health_score', 100)),
+                            'stability_score': float(row.get('stability_score_0_100') or row.get('stability_score', 100)),
+                            'efficiency_score': float(row.get('efficiency_score_0_100') or row.get('efficiency_score', 100)),
+                            'is_stressed': bool(int(row.get('is_stressed_flag') or row.get('is_stressed', 0))),
+                            'cpu_rate': float(row.get('cpu_rate_of_change') or row.get('cpu_rate', 0)),
                             'anomaly_count': int(row.get('anomaly_count', 0))
                         })
             return history[-limit:]
@@ -198,17 +216,18 @@ class MetricsStorage:
                     reader = csv.DictReader(f)
                     for row in reader:
                         if container_id is None or row['container_id'] == container_id:
+                            # Handle both old and new column names
                             history.append({
-                                'timestamp': float(row['timestamp']),
-                                'datetime': row['datetime'],
+                                'timestamp': float(row.get('timestamp_unix') or row.get('timestamp', 0)),
+                                'datetime': row.get('datetime_IST') or row.get('datetime', ''),
                                 'container_id': row['container_id'],
                                 'anomaly_type': row['anomaly_type'],
-                                'severity': row['severity'],
-                                'value': float(row['value']) if row['value'] else 0,
-                                'expected': float(row['expected']) if row['expected'] else 0,
-                                'z_score': float(row['z_score']) if row['z_score'] else 0,
-                                'algorithm': row['algorithm'],
-                                'message': row['message']
+                                'severity': row.get('severity_level') or row.get('severity', 'low'),
+                                'value': float(row.get('actual_value') or row.get('value', 0) or 0),
+                                'expected': float(row.get('expected_value') or row.get('expected', 0) or 0),
+                                'z_score': float(row.get('z_score', 0) or 0),
+                                'algorithm': row.get('detection_algorithm') or row.get('algorithm', ''),
+                                'message': row.get('description') or row.get('message', '')
                             })
             return history[-limit:]
         except Exception as e:
