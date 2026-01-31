@@ -686,7 +686,31 @@ function MonitorModal({ container, metrics, history, onClose }) {
     setLoadingProcesses(false)
   }
 
-  const runningCommand = processes.length > 0 ? processes[0].command : null
+  // Get a clean display version of the running command
+  const getCleanCommand = () => {
+    if (processes.length === 0) return null
+    const cmd = processes[0].command || ''
+    // Extract the label from our commands like "[Variable CPU]", "[Spike Demo]", etc.
+    const labelMatch = cmd.match(/\[([^\]]+)\]/)
+    if (labelMatch) {
+      return labelMatch[1]
+    }
+    // If it's a shell script, show description
+    if (cmd.includes('while') || cmd.includes('for')) {
+      return 'Stress Test Running'
+    }
+    if (cmd.includes('dd if=/dev/zero')) {
+      return 'Memory Allocation Test'
+    }
+    if (cmd.includes('sleep')) {
+      return 'Sleep/Idle Process'
+    }
+    // Truncate long commands
+    return cmd.length > 50 ? cmd.substring(0, 50) + '...' : cmd
+  }
+  
+  const runningCommand = getCleanCommand()
+  const fullCommand = processes.length > 0 ? processes[0].command : null
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -718,8 +742,8 @@ function MonitorModal({ container, metrics, history, onClose }) {
           </div>
 
           {runningCommand && (
-            <div className="command-banner">
-              <span className="command-label">Running Command</span>
+            <div className="command-banner" title={fullCommand}>
+              <span className="command-label">Running</span>
               <code className="command-code">{runningCommand}</code>
             </div>
           )}

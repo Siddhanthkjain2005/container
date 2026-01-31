@@ -265,7 +265,13 @@ class EnhancedAnomalyDetector:
             cpu_z = (cpu_percent - stats.cpu_ema) / cpu_std if cpu_std > 0 else 0
             
             if abs(cpu_z) > threshold:
-                severity = "high" if abs(cpu_z) > threshold * 1.5 else "medium"
+                # Severity based on z-score magnitude
+                if abs(cpu_z) > threshold * 2:
+                    severity = "high"
+                elif abs(cpu_z) > threshold * 1.3:
+                    severity = "medium"
+                else:
+                    severity = "low"
                 anomaly = {
                     "type": "cpu_spike" if cpu_z > 0 else "cpu_drop",
                     "container_id": container_id,
@@ -284,7 +290,13 @@ class EnhancedAnomalyDetector:
             mem_z = (memory_bytes - stats.mem_ema) / mem_std if mem_std > 0 else 0
             
             if abs(mem_z) > threshold:
-                severity = "high" if abs(mem_z) > threshold * 1.5 else "medium"
+                # Severity based on z-score magnitude
+                if abs(mem_z) > threshold * 2:
+                    severity = "high"
+                elif abs(mem_z) > threshold * 1.3:
+                    severity = "medium"
+                else:
+                    severity = "low"
                 mem_mb = memory_bytes / (1024 * 1024)
                 expected_mb = stats.mem_ema / (1024 * 1024)
                 anomaly = {
@@ -302,14 +314,21 @@ class EnhancedAnomalyDetector:
             
             # 2. Sudden Change Detection
             is_sudden, change_ratio = self._detect_sudden_change(cpu_percent, stats.cpu_history)
-            if is_sudden and change_ratio > 0.8:  # Major sudden change
+            if is_sudden and change_ratio > 0.5:  # Lower threshold for detection
+                # Severity based on change magnitude
+                if change_ratio > 2.0:
+                    severity = "high"
+                elif change_ratio > 1.0:
+                    severity = "medium"
+                else:
+                    severity = "low"
                 anomaly = {
                     "type": "sudden_cpu_change",
                     "container_id": container_id,
                     "timestamp": current_time,
                     "value": round(cpu_percent, 2),
                     "change_ratio": round(change_ratio, 2),
-                    "severity": "high" if change_ratio > 1.5 else "medium",
+                    "severity": severity,
                     "algorithm": "sudden_change",
                     "message": f"Sudden CPU change detected: {change_ratio*100:.0f}% change"
                 }
