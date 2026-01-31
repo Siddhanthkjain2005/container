@@ -20,11 +20,12 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 
 def get_ist_datetime(ts: float = None) -> str:
-    """Convert timestamp to IST datetime string"""
+    """Convert timestamp to IST datetime string matching live clock format"""
     if ts is None:
         ts = time.time()
     dt = datetime.fromtimestamp(ts, tz=IST)
-    return dt.strftime('%Y-%m-%d %H:%M:%S IST')
+    # Format: "Saturday, 01 February, 2026 at 12:45:30 PM IST"
+    return dt.strftime('%A, %d %B, %Y at %I:%M:%S %p IST')
 
 
 @dataclass

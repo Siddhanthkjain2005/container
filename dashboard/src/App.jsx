@@ -1611,7 +1611,7 @@ function App() {
           {[
             { id: 'dashboard', label: 'Dashboard', icon: Icons.Layers },
             { id: 'stats', label: 'Resources', icon: Icons.BarChart },
-            { id: 'timeline', label: 'Monitor', icon: Icons.Gauge2 },
+            { id: 'insights', label: 'Insights', icon: Icons.Sparkles },
             { id: 'analytics', label: 'ML Analytics', icon: Icons.Brain },
             { id: 'about', label: 'About', icon: Icons.Info },
           ].map(tab => (
@@ -1928,232 +1928,351 @@ function App() {
           </div>
         )}
 
-        {currentPage === 'timeline' && (
-          <div className="page-content">
+        {currentPage === 'insights' && (
+          <div className="page-content insights-page">
             <div className="page-header">
-              <h2>System Monitor</h2>
+              <h2>Container Insights</h2>
               <div className="live-clock">
                 <Icons.Clock />
                 <span className="clock-time">{getCurrentIST()}</span>
-                <span className="clock-label">IST</span>
               </div>
             </div>
 
-            {/* Live System Status Grid */}
-            <div className="monitor-grid">
-              {/* Container Status Cards */}
-              <div className="section glass-card monitor-containers">
-                <h3><Icons.Box /> Container Status</h3>
-                <div className="container-status-list">
-                  {containers.length === 0 ? (
-                    <div className="empty-state">
-                      <Icons.Box />
-                      <p>No containers found</p>
+            {/* Hexagonal Stats Grid */}
+            <div className="insights-hero">
+              <div className="hex-grid">
+                <div className="hex-stat">
+                  <div className="hex-inner blue">
+                    <span className="hex-value">{containers.length}</span>
+                    <span className="hex-label">Total</span>
+                  </div>
+                </div>
+                <div className="hex-stat">
+                  <div className="hex-inner green">
+                    <span className="hex-value">{containers.filter(c => c.state === 'running').length}</span>
+                    <span className="hex-label">Active</span>
+                  </div>
+                </div>
+                <div className="hex-stat">
+                  <div className="hex-inner amber">
+                    <span className="hex-value">{Object.values(metrics).reduce((sum, m) => sum + (m.cpu_percent || 0), 0).toFixed(0)}%</span>
+                    <span className="hex-label">CPU Load</span>
+                  </div>
+                </div>
+                <div className="hex-stat">
+                  <div className="hex-inner cyan">
+                    <span className="hex-value">{(Object.values(metrics).reduce((sum, m) => sum + (m.memory_bytes || 0), 0) / 1048576).toFixed(0)}</span>
+                    <span className="hex-label">MB Used</span>
+                  </div>
+                </div>
+                <div className="hex-stat">
+                  <div className="hex-inner pink">
+                    <span className="hex-value">{Object.values(metrics).reduce((sum, m) => sum + (m.pids || 0), 0)}</span>
+                    <span className="hex-label">Processes</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Container Comparison Matrix */}
+            <div className="insights-section">
+              <h3><Icons.Hash /> Container Comparison Matrix</h3>
+              <div className="comparison-matrix">
+                <div className="matrix-header">
+                  <div className="matrix-cell header">Container</div>
+                  <div className="matrix-cell header">State</div>
+                  <div className="matrix-cell header">CPU</div>
+                  <div className="matrix-cell header">Memory</div>
+                  <div className="matrix-cell header">Health</div>
+                  <div className="matrix-cell header">Trend</div>
+                </div>
+                {containers.length === 0 ? (
+                  <div className="matrix-empty">
+                    <Icons.Box />
+                    <span>No containers to compare</span>
+                  </div>
+                ) : containers.map(c => {
+                  const m = metrics[c.id] || {}
+                  const analytics = containerAnalytics[c.id] || {}
+                  const health = healthScores[c.id] || 100
+                  return (
+                    <div key={c.id} className={`matrix-row ${c.state}`}>
+                      <div className="matrix-cell name">{c.name}</div>
+                      <div className="matrix-cell">
+                        <span className={`state-pill ${c.state}`}>{c.state}</span>
+                      </div>
+                      <div className="matrix-cell">
+                        <div className="inline-bar">
+                          <div className="inline-bar-fill amber" style={{ width: `${Math.min(m.cpu_percent || 0, 100)}%` }} />
+                        </div>
+                        <span className="inline-value">{(m.cpu_percent || 0).toFixed(1)}%</span>
+                      </div>
+                      <div className="matrix-cell">
+                        <div className="inline-bar">
+                          <div className="inline-bar-fill cyan" style={{ width: `${Math.min(((m.memory_bytes || 0) / (m.memory_limit || 134217728)) * 100, 100)}%` }} />
+                        </div>
+                        <span className="inline-value">{formatBytes(m.memory_bytes || 0)}</span>
+                      </div>
+                      <div className="matrix-cell">
+                        <span className={`health-badge ${health >= 80 ? 'good' : health >= 50 ? 'warn' : 'bad'}`}>
+                          {health.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="matrix-cell">
+                        <TrendIndicator trend={analytics.trend} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Resource Distribution Rings */}
+            <div className="insights-duo">
+              <div className="insights-section half">
+                <h3><Icons.PieChart /> CPU Distribution</h3>
+                <div className="ring-chart-container">
+                  {containers.filter(c => c.state === 'running').length === 0 ? (
+                    <div className="ring-empty">
+                      <Icons.Cpu />
+                      <span>No active containers</span>
                     </div>
                   ) : (
-                    containers.map(c => {
+                    <div className="ring-chart">
+                      <svg viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="12" />
+                        {containers.filter(c => c.state === 'running').reduce((acc, c, i, arr) => {
+                          const m = metrics[c.id] || {}
+                          const total = arr.reduce((s, x) => s + (metrics[x.id]?.cpu_percent || 0), 0) || 1
+                          const pct = (m.cpu_percent || 0) / total
+                          const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6']
+                          const offset = acc.offset
+                          const dashArray = `${pct * 251.2} ${251.2 - pct * 251.2}`
+                          acc.elements.push(
+                            <circle 
+                              key={c.id} 
+                              cx="50" cy="50" r="40" 
+                              fill="none" 
+                              stroke={colors[i % colors.length]} 
+                              strokeWidth="12"
+                              strokeDasharray={dashArray}
+                              strokeDashoffset={-offset}
+                              transform="rotate(-90 50 50)"
+                            />
+                          )
+                          acc.offset += pct * 251.2
+                          return acc
+                        }, { elements: [], offset: 0 }).elements}
+                      </svg>
+                      <div className="ring-center">
+                        <span className="ring-value">{Object.values(metrics).reduce((sum, m) => sum + (m.cpu_percent || 0), 0).toFixed(0)}%</span>
+                        <span className="ring-label">Total</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="ring-legend">
+                    {containers.filter(c => c.state === 'running').map((c, i) => {
                       const m = metrics[c.id] || {}
-                      const h = history[c.id] || { cpu: [], mem: [] }
-                      const analytics = containerAnalytics[c.id] || {}
+                      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6']
                       return (
-                        <div key={c.id} className={`container-status-card ${c.state}`}>
-                          <div className="csc-header">
-                            <div className="csc-info">
-                              <span className="csc-name">{c.name}</span>
-                              <StatusBadge status={c.state} />
-                            </div>
-                            {c.state === 'running' && (
-                              <div className="csc-uptime">
-                                <Icons.Clock />
-                                <span>{formatDuration(m.uptime || 0)}</span>
-                              </div>
-                            )}
-                          </div>
-                          {c.state === 'running' && (
-                            <>
-                              <div className="csc-metrics">
-                                <div className="csc-metric">
-                                  <span className="csc-metric-label">CPU</span>
-                                  <span className="csc-metric-value amber">{(m.cpu_percent || 0).toFixed(1)}%</span>
-                                </div>
-                                <div className="csc-metric">
-                                  <span className="csc-metric-label">Memory</span>
-                                  <span className="csc-metric-value cyan">{formatBytes(m.memory_bytes || 0)}</span>
-                                </div>
-                                <div className="csc-metric">
-                                  <span className="csc-metric-label">Processes</span>
-                                  <span className="csc-metric-value">{m.pids || 0}</span>
-                                </div>
-                                <div className="csc-metric">
-                                  <span className="csc-metric-label">Health</span>
-                                  <span className={`csc-metric-value ${(healthScores[c.id] || 100) >= 80 ? 'green' : 'red'}`}>
-                                    {(healthScores[c.id] || 100).toFixed(0)}%
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="csc-chart">
-                                <Sparkline data={h.cpu.slice(-30)} color="#f59e0b" height={30} width={200} />
-                              </div>
-                              {analytics.is_stressed && (
-                                <div className="csc-alert">
-                                  <Icons.AlertTriangle /> Under stress
-                                </div>
-                              )}
-                            </>
-                          )}
+                        <div key={c.id} className="legend-item">
+                          <span className="legend-dot" style={{ background: colors[i % colors.length] }} />
+                          <span className="legend-name">{c.name}</span>
+                          <span className="legend-value">{(m.cpu_percent || 0).toFixed(1)}%</span>
                         </div>
                       )
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* Resource Usage Meters */}
-              <div className="section glass-card monitor-resources">
-                <h3><Icons.Gauge2 /> Resource Usage</h3>
-                <div className="resource-meters">
-                  <div className="resource-meter">
-                    <div className="meter-header">
-                      <span className="meter-label">Total CPU</span>
-                      <span className="meter-value amber">{Object.values(metrics).reduce((sum, m) => sum + (m.cpu_percent || 0), 0).toFixed(1)}%</span>
-                    </div>
-                    <div className="meter-track">
-                      <div 
-                        className="meter-fill amber"
-                        style={{ width: `${Math.min(Object.values(metrics).reduce((sum, m) => sum + (m.cpu_percent || 0), 0), 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="resource-meter">
-                    <div className="meter-header">
-                      <span className="meter-label">Total Memory</span>
-                      <span className="meter-value cyan">{formatBytes(Object.values(metrics).reduce((sum, m) => sum + (m.memory_bytes || 0), 0))}</span>
-                    </div>
-                    <div className="meter-track">
-                      <div 
-                        className="meter-fill cyan"
-                        style={{ width: `${Math.min((Object.values(metrics).reduce((sum, m) => sum + (m.memory_bytes || 0), 0) / (256 * 1024 * 1024)) * 100, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="resource-meter">
-                    <div className="meter-header">
-                      <span className="meter-label">Running Containers</span>
-                      <span className="meter-value green">{containers.filter(c => c.state === 'running').length} / {containers.length}</span>
-                    </div>
-                    <div className="meter-track">
-                      <div 
-                        className="meter-fill green"
-                        style={{ width: containers.length > 0 ? `${(containers.filter(c => c.state === 'running').length / containers.length) * 100}%` : '0%' }}
-                      />
-                    </div>
-                  </div>
-                  <div className="resource-meter">
-                    <div className="meter-header">
-                      <span className="meter-label">Avg Health Score</span>
-                      <span className={`meter-value ${(systemStats.average_health_score || 100) >= 80 ? 'green' : 'amber'}`}>
-                        {(systemStats.average_health_score || 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="meter-track">
-                      <div 
-                        className={`meter-fill ${(systemStats.average_health_score || 100) >= 80 ? 'green' : 'amber'}`}
-                        style={{ width: `${systemStats.average_health_score || 100}%` }}
-                      />
-                    </div>
+                    })}
                   </div>
                 </div>
               </div>
 
-              {/* Recent Anomalies */}
-              <div className="section glass-card monitor-anomalies">
-                <h3><Icons.AlertTriangle /> Recent Anomalies</h3>
-                <div className="anomaly-feed">
-                  {anomalies.length === 0 ? (
-                    <div className="empty-state success">
-                      <Icons.Heart />
-                      <p>All systems normal</p>
+              <div className="insights-section half">
+                <h3><Icons.Memory /> Memory Distribution</h3>
+                <div className="ring-chart-container">
+                  {containers.filter(c => c.state === 'running').length === 0 ? (
+                    <div className="ring-empty">
+                      <Icons.Memory />
+                      <span>No active containers</span>
                     </div>
                   ) : (
-                    anomalies.slice(-10).reverse().map((a, i) => (
-                      <div key={i} className={`anomaly-feed-item ${a.severity}`}>
-                        <div className="afi-icon">
-                          <Icons.AlertTriangle />
-                        </div>
-                        <div className="afi-content">
-                          <div className="afi-header">
-                            <span className="afi-type">{a.type?.replace(/_/g, ' ')}</span>
-                            <span className={`afi-severity ${a.severity}`}>{a.severity}</span>
-                          </div>
-                          <p className="afi-message">{a.message}</p>
-                          <span className="afi-time">{formatToIST(a.timestamp)}</span>
-                        </div>
+                    <div className="ring-chart">
+                      <svg viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="12" />
+                        {containers.filter(c => c.state === 'running').reduce((acc, c, i, arr) => {
+                          const m = metrics[c.id] || {}
+                          const total = arr.reduce((s, x) => s + (metrics[x.id]?.memory_bytes || 0), 0) || 1
+                          const pct = (m.memory_bytes || 0) / total
+                          const colors = ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899']
+                          const offset = acc.offset
+                          const dashArray = `${pct * 251.2} ${251.2 - pct * 251.2}`
+                          acc.elements.push(
+                            <circle 
+                              key={c.id} 
+                              cx="50" cy="50" r="40" 
+                              fill="none" 
+                              stroke={colors[i % colors.length]} 
+                              strokeWidth="12"
+                              strokeDasharray={dashArray}
+                              strokeDashoffset={-offset}
+                              transform="rotate(-90 50 50)"
+                            />
+                          )
+                          acc.offset += pct * 251.2
+                          return acc
+                        }, { elements: [], offset: 0 }).elements}
+                      </svg>
+                      <div className="ring-center">
+                        <span className="ring-value">{(Object.values(metrics).reduce((sum, m) => sum + (m.memory_bytes || 0), 0) / 1048576).toFixed(0)}</span>
+                        <span className="ring-label">MB</span>
                       </div>
-                    ))
+                    </div>
                   )}
+                  <div className="ring-legend">
+                    {containers.filter(c => c.state === 'running').map((c, i) => {
+                      const m = metrics[c.id] || {}
+                      const colors = ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899']
+                      return (
+                        <div key={c.id} className="legend-item">
+                          <span className="legend-dot" style={{ background: colors[i % colors.length] }} />
+                          <span className="legend-name">{c.name}</span>
+                          <span className="legend-value">{formatBytes(m.memory_bytes || 0)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* System Summary */}
-              <div className="section glass-card monitor-summary">
-                <h3><Icons.BarChart /> Summary</h3>
-                <div className="summary-stats">
-                  <div className="summary-stat">
-                    <div className="ss-icon blue"><Icons.Box /></div>
-                    <div className="ss-info">
-                      <span className="ss-value">{containers.length}</span>
-                      <span className="ss-label">Containers</span>
+            {/* Performance Radar Cards */}
+            <div className="insights-section">
+              <h3><Icons.Sparkles /> Performance Snapshot</h3>
+              <div className="perf-cards">
+                {containers.map(c => {
+                  const m = metrics[c.id] || {}
+                  const h = history[c.id] || { cpu: [], mem: [] }
+                  const analytics = containerAnalytics[c.id] || {}
+                  const health = healthScores[c.id] || 100
+                  const stability = stabilityScores[c.id] || 100
+                  const efficiency = efficiencyScores[c.id] || 100
+                  const avgScore = ((health + stability + efficiency) / 3).toFixed(0)
+                  
+                  return (
+                    <div key={c.id} className={`perf-card ${c.state}`}>
+                      <div className="perf-card-header">
+                        <span className="perf-card-name">{c.name}</span>
+                        <span className={`perf-overall ${avgScore >= 80 ? 'good' : avgScore >= 50 ? 'warn' : 'bad'}`}>
+                          {avgScore}
+                        </span>
+                      </div>
+                      
+                      {c.state === 'running' ? (
+                        <>
+                          <div className="perf-radial">
+                            <svg viewBox="0 0 80 80">
+                              {/* Background arcs */}
+                              <path d="M 40 10 A 30 30 0 0 1 65 55" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" strokeLinecap="round" />
+                              <path d="M 15 55 A 30 30 0 0 1 40 10" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" strokeLinecap="round" />
+                              <path d="M 15 55 A 30 30 0 0 0 65 55" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" strokeLinecap="round" />
+                              {/* Active arcs */}
+                              <path d="M 40 10 A 30 30 0 0 1 65 55" fill="none" stroke="#10b981" strokeWidth="4" strokeLinecap="round" 
+                                strokeDasharray={`${health * 0.94} 94`} />
+                              <path d="M 15 55 A 30 30 0 0 1 40 10" fill="none" stroke="#3b82f6" strokeWidth="4" strokeLinecap="round"
+                                strokeDasharray={`${stability * 0.94} 94`} />
+                              <path d="M 15 55 A 30 30 0 0 0 65 55" fill="none" stroke="#f59e0b" strokeWidth="4" strokeLinecap="round"
+                                strokeDasharray={`${efficiency * 0.94} 94`} />
+                            </svg>
+                          </div>
+                          
+                          <div className="perf-metrics">
+                            <div className="perf-metric">
+                              <span className="pm-dot green" />
+                              <span className="pm-label">Health</span>
+                              <span className="pm-value">{health.toFixed(0)}</span>
+                            </div>
+                            <div className="perf-metric">
+                              <span className="pm-dot blue" />
+                              <span className="pm-label">Stability</span>
+                              <span className="pm-value">{stability.toFixed(0)}</span>
+                            </div>
+                            <div className="perf-metric">
+                              <span className="pm-dot amber" />
+                              <span className="pm-label">Efficiency</span>
+                              <span className="pm-value">{efficiency.toFixed(0)}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="perf-stats">
+                            <div className="perf-stat">
+                              <Icons.Cpu />
+                              <span>{(m.cpu_percent || 0).toFixed(1)}%</span>
+                            </div>
+                            <div className="perf-stat">
+                              <Icons.Memory />
+                              <span>{formatBytes(m.memory_bytes || 0)}</span>
+                            </div>
+                            <div className="perf-stat">
+                              <Icons.Users />
+                              <span>{m.pids || 0}</span>
+                            </div>
+                          </div>
+                          
+                          {analytics.is_stressed && (
+                            <div className="perf-alert">
+                              <Icons.Flame /> Stressed
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="perf-stopped">
+                          <Icons.Stop />
+                          <span>Container Stopped</span>
+                        </div>
+                      )}
                     </div>
+                  )
+                })}
+                {containers.length === 0 && (
+                  <div className="perf-empty">
+                    <Icons.Box />
+                    <span>Create containers to see performance insights</span>
                   </div>
-                  <div className="summary-stat">
-                    <div className="ss-icon green"><Icons.Play /></div>
-                    <div className="ss-info">
-                      <span className="ss-value">{containers.filter(c => c.state === 'running').length}</span>
-                      <span className="ss-label">Running</span>
-                    </div>
-                  </div>
-                  <div className="summary-stat">
-                    <div className="ss-icon amber"><Icons.AlertTriangle /></div>
-                    <div className="ss-info">
-                      <span className="ss-value">{anomalies.length}</span>
-                      <span className="ss-label">Anomalies</span>
-                    </div>
-                  </div>
-                  <div className="summary-stat">
-                    <div className="ss-icon pink"><Icons.Flame /></div>
-                    <div className="ss-info">
-                      <span className="ss-value">{containers.filter(c => containerAnalytics[c.id]?.is_stressed).length}</span>
-                      <span className="ss-label">Stressed</span>
-                    </div>
-                  </div>
-                </div>
+                )}
+              </div>
+            </div>
 
-                <div className="severity-breakdown">
-                  <h4>Anomaly Severity</h4>
-                  <div className="severity-bars">
-                    <div className="severity-bar">
-                      <span className="sb-label">High</span>
-                      <div className="sb-track">
-                        <div className="sb-fill high" style={{ width: anomalies.length > 0 ? `${(anomalies.filter(a => a.severity === 'high').length / anomalies.length) * 100}%` : '0%' }} />
-                      </div>
-                      <span className="sb-count">{anomalies.filter(a => a.severity === 'high').length}</span>
-                    </div>
-                    <div className="severity-bar">
-                      <span className="sb-label">Medium</span>
-                      <div className="sb-track">
-                        <div className="sb-fill medium" style={{ width: anomalies.length > 0 ? `${(anomalies.filter(a => a.severity === 'medium').length / anomalies.length) * 100}%` : '0%' }} />
-                      </div>
-                      <span className="sb-count">{anomalies.filter(a => a.severity === 'medium').length}</span>
-                    </div>
-                    <div className="severity-bar">
-                      <span className="sb-label">Low</span>
-                      <div className="sb-track">
-                        <div className="sb-fill low" style={{ width: anomalies.length > 0 ? `${(anomalies.filter(a => a.severity === 'low').length / anomalies.length) * 100}%` : '0%' }} />
-                      </div>
-                      <span className="sb-count">{anomalies.filter(a => a.severity === 'low').length}</span>
-                    </div>
-                  </div>
-                </div>
+            {/* Quick Actions */}
+            <div className="insights-section">
+              <h3><Icons.Zap /> Quick Actions</h3>
+              <div className="quick-actions">
+                <a 
+                  className="quick-action" 
+                  href={`${API_URL}/api/export/csv`} 
+                  download 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  <Icons.Download />
+                  <span>Export Metrics</span>
+                </a>
+                <a 
+                  className="quick-action" 
+                  href={`${API_URL}/api/export/anomalies`} 
+                  download 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  <Icons.AlertTriangle />
+                  <span>Export Anomalies</span>
+                </a>
+                <button className="quick-action" onClick={fetchContainers}>
+                  <Icons.Refresh />
+                  <span>Refresh Data</span>
+                </button>
+                <button className="quick-action" onClick={() => setShowCreateModal(true)}>
+                  <Icons.Plus />
+                  <span>New Container</span>
+                </button>
               </div>
             </div>
           </div>
@@ -2163,6 +2282,10 @@ function App() {
           <div className="page-content">
             <div className="page-header">
               <h2>ML Analytics & Anomaly Detection</h2>
+              <div className="live-clock">
+                <Icons.Clock />
+                <span className="clock-time">{getCurrentIST()}</span>
+              </div>
               <div className="header-actions-group">
                 <a
                   className="btn btn-secondary btn-icon-text"
