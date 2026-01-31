@@ -20,12 +20,25 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 
 def get_ist_datetime(ts: float = None) -> str:
-    """Convert timestamp to IST datetime string matching live clock format"""
+    """Convert timestamp to IST datetime string matching live clock format
+    Format matches JavaScript: toLocaleString('en-IN', {weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true})
+    Example: Sunday, 1 February 2026 at 12:45:30 pm
+    """
     if ts is None:
         ts = time.time()
     dt = datetime.fromtimestamp(ts, tz=IST)
-    # Format: "Saturday, 01 February, 2026 at 12:45:30 PM IST"
-    return dt.strftime('%A, %d %B, %Y at %I:%M:%S %p IST')
+    # Match JS toLocaleString format: "Sunday, 1 February 2026 at 12:45:30 pm"
+    weekday = dt.strftime('%A')
+    day = dt.day  # No leading zero
+    month = dt.strftime('%B')
+    year = dt.year
+    hour = dt.hour % 12
+    if hour == 0:
+        hour = 12
+    minute = dt.strftime('%M')
+    second = dt.strftime('%S')
+    ampm = 'pm' if dt.hour >= 12 else 'am'
+    return f"{weekday}, {day} {month} {year} at {hour}:{minute}:{second} {ampm}"
 
 
 @dataclass
