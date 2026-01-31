@@ -858,11 +858,11 @@ function ExecuteCommandModal({ container, isOpen, onClose, onExecute }) {
   if (!isOpen || !container) return null
 
   const commands = [
-    { id: '1', icon: Icons.Cpu, name: 'CPU Stress', desc: 'Intensive counting loop - high CPU usage', color: 'amber' },
-    { id: '2', icon: Icons.Memory, name: 'Memory Stress', desc: 'Allocate and hold memory', color: 'cyan' },
-    { id: '3', icon: Icons.Zap, name: 'Combined Stress', desc: 'CPU + Memory together', color: 'pink' },
-    { id: '4', icon: Icons.Clock, name: 'Sleep Process', desc: 'Keep container running for monitoring', color: 'blue' },
-    { id: '5', icon: Icons.Activity, name: 'Math Calculations', desc: 'Heavy math operations', color: 'green' },
+    { id: '1', icon: Icons.Cpu, name: 'Variable CPU Load', desc: 'Alternating CPU patterns - triggers anomaly detection', color: 'amber' },
+    { id: '2', icon: Icons.Memory, name: 'Memory Allocation', desc: 'Allocate memory - shows memory limits', color: 'cyan' },
+    { id: '3', icon: Icons.Zap, name: 'CPU Spike Pattern', desc: 'Bursts & idle - best for anomaly demos', color: 'pink' },
+    { id: '4', icon: Icons.Activity, name: 'Gradual Increase', desc: 'Slowly increasing load - shows trend detection', color: 'green' },
+    { id: '5', icon: Icons.Clock, name: 'Normal Workload', desc: 'Stable load - baseline for health scores', color: 'blue' },
     { id: '6', icon: Icons.Terminal, name: 'Custom Command', desc: 'Enter your own shell command', color: 'purple' },
   ]
 
@@ -1228,22 +1228,24 @@ function App() {
 
     switch (cmdType) {
       case '1':
-        // Variable CPU stress - alternates between high and low
-        command = `echo 'Starting variable CPU stress for ${duration}s...'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 500000 ]; do i=$((i+1)); done; sleep 0.2; i=0; while [ $i -lt 200000 ]; do i=$((i+1)); done; sleep 0.5; i=0; while [ $i -lt 1000000 ]; do i=$((i+1)); done; sleep 0.1; done; echo 'CPU stress complete'`
+        // Variable CPU Load - alternates between high, medium, low - good for showing ML adaptation
+        command = `echo '[Variable CPU] Running for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do echo 'HIGH'; i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; echo 'LOW'; sleep 0.5; i=0; while [ $i -lt 200000 ]; do i=$((i+1)); done; sleep 0.3; done; echo '[Complete]'`
         break
       case '2':
-        command = `dd if=/dev/zero of=/dev/shm/memtest bs=1M count=${memorySize} 2>/dev/null && echo 'Allocated ${memorySize}MB' && sleep ${duration} && rm -f /dev/shm/memtest && echo 'Memory released after ${duration}s'`
+        // Memory Allocation - allocate and hold memory to show memory limits
+        command = `echo '[Memory Test] Allocating ${memorySize}MB'; dd if=/dev/zero of=/dev/shm/memtest bs=1M count=${memorySize} 2>/dev/null && echo '[Holding memory for ${duration}s]' && sleep ${duration} && rm -f /dev/shm/memtest && echo '[Memory Released]'`
         break
       case '3':
-        // Combined variable stress
-        command = `dd if=/dev/zero of=/dev/shm/memtest bs=1M count=${memorySize} 2>/dev/null; echo 'Memory allocated, starting variable CPU...'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 0.3; i=0; while [ $i -lt 300000 ]; do i=$((i+1)); done; sleep 0.6; done; rm -f /dev/shm/memtest; echo 'Complete'`
+        // CPU Spike Pattern - dramatic spikes for anomaly detection demos
+        command = `echo '[Spike Demo] Running for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do echo 'SPIKE!'; i=0; while [ $i -lt 1500000 ]; do i=$((i+1)); done; echo 'idle'; sleep 2; done; echo '[Complete]'`
         break
       case '4':
-        command = `echo 'Container running for ${duration}s...'; sleep ${duration}; echo 'Done after ${duration}s'`
+        // Gradual Increase - slowly ramp up CPU for trend detection
+        command = `echo '[Gradual Increase] Running for ${duration}s'; intensity=100000; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do echo "Load: $intensity"; i=0; while [ $i -lt $intensity ]; do i=$((i+1)); done; intensity=$((intensity + 50000)); sleep 0.5; done; echo '[Complete]'`
         break
       case '5':
-        // Spike pattern - heavy bursts followed by idle
-        command = `echo 'Starting spike pattern for ${duration}s...'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do echo 'SPIKE'; i=0; while [ $i -lt 2000000 ]; do i=$((i+1)); done; echo 'IDLE'; sleep 2; i=0; while [ $i -lt 100000 ]; do i=$((i+1)); done; sleep 1; done; echo 'Complete'`
+        // Normal Workload - stable moderate load for baseline
+        command = `echo '[Normal Workload] Running for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 300000 ]; do i=$((i+1)); done; sleep 0.2; done; echo '[Complete]'`
         break
       case '6':
         command = customCmd
