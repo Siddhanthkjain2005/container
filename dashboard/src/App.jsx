@@ -1562,7 +1562,7 @@ function App() {
     switch (cmdType) {
       case '1':
         // Variable CPU Load - alternates between high, medium, low - good for showing ML adaptation
-        command = `echo '[Variable CPU] Running for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do echo 'HIGH'; i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; echo 'LOW'; sleep 0.5; i=0; while [ $i -lt 200000 ]; do i=$((i+1)); done; sleep 0.3; done & pid=$!; sleep ${duration}; kill $pid 2>/dev/null; echo '[Complete]'`
+        command = `echo '[Variable CPU] Running for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do echo 'HIGH'; i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; echo 'LOW'; sleep 0.5; i=0; while [ $i -lt 200000 ]; do i=$((i+1)); done; sleep 0.3; done; echo '[Complete]'`
         break
       case '2':
         // Memory Allocation - allocate and hold memory to show memory limits (use /tmp instead of /dev/shm)
@@ -1570,15 +1570,15 @@ function App() {
         break
       case '3':
         // CPU Spike Pattern - dramatic spikes for anomaly detection demos
-        command = `echo '[Spike Demo] Running for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do echo 'SPIKE!'; i=0; while [ $i -lt 1500000 ]; do i=$((i+1)); done; echo 'idle'; sleep 2; done & pid=$!; sleep ${duration}; kill $pid 2>/dev/null; echo '[Complete]'`
+        command = `echo '[Spike Demo] Running for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do echo 'SPIKE!'; i=0; while [ $i -lt 1500000 ]; do i=$((i+1)); done; echo 'idle'; sleep 2; done; echo '[Complete]'`
         break
       case '4':
         // Gradual Increase - slowly ramp up CPU for trend detection
-        command = `echo '[Gradual Increase] Running for ${duration}s'; intensity=100000; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do echo "Load: $intensity"; i=0; while [ $i -lt $intensity ]; do i=$((i+1)); done; intensity=$((intensity + 50000)); sleep 0.5; done & pid=$!; sleep ${duration}; kill $pid 2>/dev/null; echo '[Complete]'`
+        command = `echo '[Gradual Increase] Running for ${duration}s'; intensity=100000; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do echo "Load: $intensity"; i=0; while [ $i -lt $intensity ]; do i=$((i+1)); done; intensity=$((intensity + 50000)); sleep 0.5; done; echo '[Complete]'`
         break
       case '5':
         // Normal Workload - stable moderate load for baseline
-        command = `echo '[Normal Workload] Running for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 300000 ]; do i=$((i+1)); done; sleep 0.2; done & pid=$!; sleep ${duration}; kill $pid 2>/dev/null; echo '[Complete]'`
+        command = `echo '[Normal Workload] Running for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 300000 ]; do i=$((i+1)); done; sleep 0.2; done; echo '[Complete]'`
         break
       case '6':
         command = customCmd
