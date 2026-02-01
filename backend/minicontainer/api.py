@@ -425,12 +425,12 @@ def start_container(container_id: str):
     def run_container():
         try:
             # Use C runtime which has proper mount namespace + pivot_root
-            # Run as background process without waiting
+            # Run as background process with infinite loop to keep container alive
             cmd = [
                 "sudo", str(RUNTIME_PATH), "run", container_id,
                 "--rootfs", rootfs,
                 "--memory", memory_limit,
-                "--cmd", "sleep 86400"  # Keep container alive for 24 hours
+                "--cmd", "/bin/sh -c 'while true; do sleep 3600; done'"  # Keep container alive indefinitely
             ]
             # Start process in background without waiting
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
