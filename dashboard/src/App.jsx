@@ -1879,46 +1879,10 @@ function App() {
         {currentPage === 'insights' && (
           <div className="page-content insights-page">
             <div className="page-header">
-              <h2>Container Insights</h2>
+              <h2>Insights</h2>
               <div className="live-clock">
                 <Icons.Clock />
                 <span className="clock-time">{liveTime}</span>
-              </div>
-            </div>
-
-            {/* Hexagonal Stats Grid */}
-            <div className="insights-hero">
-              <div className="hex-grid">
-                <div className="hex-stat">
-                  <div className="hex-inner blue">
-                    <span className="hex-value">{containers.length}</span>
-                    <span className="hex-label">Total</span>
-                  </div>
-                </div>
-                <div className="hex-stat">
-                  <div className="hex-inner green">
-                    <span className="hex-value">{containers.filter(c => c.state === 'running').length}</span>
-                    <span className="hex-label">Active</span>
-                  </div>
-                </div>
-                <div className="hex-stat">
-                  <div className="hex-inner amber">
-                    <span className="hex-value">{Object.values(metrics).reduce((sum, m) => sum + (m.cpu_percent || 0), 0).toFixed(0)}%</span>
-                    <span className="hex-label">CPU Load</span>
-                  </div>
-                </div>
-                <div className="hex-stat">
-                  <div className="hex-inner cyan">
-                    <span className="hex-value">{(Object.values(metrics).reduce((sum, m) => sum + (m.memory_bytes || 0), 0) / 1048576).toFixed(0)}</span>
-                    <span className="hex-label">MB Used</span>
-                  </div>
-                </div>
-                <div className="hex-stat">
-                  <div className="hex-inner pink">
-                    <span className="hex-value">{Object.values(metrics).reduce((sum, m) => sum + (m.pids || 0), 0)}</span>
-                    <span className="hex-label">Processes</span>
-                  </div>
-                </div>
               </div>
             </div>
 
