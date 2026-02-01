@@ -399,7 +399,7 @@ while true; do sleep 1; done
 
 @app.post("/api/containers/{container_id}/start")
 def start_container(container_id: str):
-    """Start a container"""
+    """Start a container using C runtime for proper isolation"""
     import threading
     
     # Find container state
@@ -409,8 +409,9 @@ def start_container(container_id: str):
     if not state_file.exists():
         raise HTTPException(status_code=404, detail="Container not found")
     
-    # Read rootfs from state
+    # Read config from state
     rootfs = "/tmp/alpine-rootfs"
+    memory_limit = "256M"
     try:
         for line in state_file.read_text().splitlines():
             if line.startswith("rootfs="):
@@ -420,17 +421,21 @@ def start_container(container_id: str):
     
     cgroup_path = f"/sys/fs/cgroup/minicontainer/{container_id}"
     
-    # Use the C runtime for proper namespace isolation
+    # Use the C runtime for proper namespace isolation with pivot_root
     def run_container():
         try:
-            # Use C runtime to create and start container with proper namespaces
+            # Use C runtime which has proper mount namespace + pivot_root
+            # Run as background process without waiting
             cmd = [
                 "sudo", str(RUNTIME_PATH), "run", container_id,
                 "--rootfs", rootfs,
-                "--memory", str(mem_limit)
+                "--memory", memory_limit,
+                "--cmd", "sleep 86400"  # Keep container alive for 24 hours
             ]
-            subprocess.run(cmd, timeout=86400, capture_output=True)
-        except:
+            # Start process in background without waiting
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+        except Exception as e:
+            print(f"Error starting container: {e}")
             pass
     
     thread = threading.Thread(target=run_container, daemon=True)
@@ -545,26 +550,28 @@ async def exec_in_container(container_id: str, request: Request):
     subprocess.run(["sudo", "cp", "/tmp/exec_temp.sh", script_path], check=False)
     subprocess.run(["sudo", "chmod", "755", script_path], check=False)
     
-    # Run the command in the container's cgroup with proper namespace isolation
+    # Run the command in the container using nsenter to join its namespaces
     import threading
     def run_in_cgroup():
         try:
-            # Use nsenter to enter the container's namespaces if possible
-            # Otherwise create new namespaces with proper mount setup
-            cmd = f"""
-sudo unshare --mount --pid --uts --ipc --fork bash -c '
-    set -e
-    echo $$ > {cgroup_path}/cgroup.procs
-    mount --make-rprivate /
-    mount --bind {DEFAULT_ROOTFS} {DEFAULT_ROOTFS}
-    mkdir -p {DEFAULT_ROOTFS}/old_root
-    cd {DEFAULT_ROOTFS}
-    pivot_root . old_root 2>/dev/null || true
-    umount -l /old_root 2>/dev/null || true
-    mount -t proc proc /proc 2>/dev/null || true
-    exec /bin/sh /tmp/{script_name}
-'
-"""
+            # Get the first PID in the container's cgroup to use as target for nsenter
+            procs_file = f"{cgroup_path}/cgroup.procs"
+            target_pid = None
+            try:
+                with open(procs_file, 'r') as f:
+                    procs = f.read().strip().split('\n')
+                    if procs and procs[0]:
+                        target_pid = procs[0]
+            except:
+                pass
+            
+            if target_pid:
+                # Use nsenter to join the container's namespaces and execute command
+                cmd = f"sudo nsenter --target {target_pid} --mount --uts --ipc --pid /bin/sh /tmp/{script_name}"
+            else:
+                # Fallback: create new namespaces (container might not be running)
+                cmd = f"sudo unshare --mount --pid --uts --ipc --fork bash -c 'echo $$ > {cgroup_path}/cgroup.procs; mount --make-rprivate /; exec chroot {DEFAULT_ROOTFS} /bin/sh /tmp/{script_name}'"
+            
             subprocess.run(cmd, shell=True, timeout=600, capture_output=True)
             subprocess.run(["sudo", "rm", "-f", script_path], check=False)
         except Exception as e:

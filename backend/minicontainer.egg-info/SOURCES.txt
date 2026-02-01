@@ -3,6 +3,8 @@ minicontainer/__init__.py
 minicontainer/api.py
 minicontainer/cli.py
 minicontainer/metrics.py
+minicontainer/ml.py
+minicontainer/storage.py
 minicontainer/wrapper.py
 minicontainer.egg-info/PKG-INFO
 minicontainer.egg-info/SOURCES.txt
