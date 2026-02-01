@@ -1922,56 +1922,56 @@ function App() {
               </div>
             </div>
 
-            {/* Container Comparison Matrix */}
+            {/* CPU Time Bar Graph */}
             <div className="insights-section">
-              <h3><Icons.Hash /> Container Comparison Matrix</h3>
-              <div className="comparison-matrix">
-                <div className="matrix-header">
-                  <div className="matrix-cell header">Container</div>
-                  <div className="matrix-cell header">State</div>
-                  <div className="matrix-cell header">CPU</div>
-                  <div className="matrix-cell header">Memory</div>
-                  <div className="matrix-cell header">Health</div>
-                  <div className="matrix-cell header">Trend</div>
-                </div>
+              <h3><Icons.Clock /> CPU Time by Container</h3>
+              <div className="cpu-time-chart">
                 {containers.length === 0 ? (
-                  <div className="matrix-empty">
+                  <div className="chart-empty">
                     <Icons.Box />
-                    <span>No containers to compare</span>
+                    <span>No containers to display</span>
                   </div>
-                ) : containers.map(c => {
-                  const m = metrics[c.id] || {}
-                  const analytics = containerAnalytics[c.id] || {}
-                  const health = healthScores[c.id] || 100
-                  return (
-                    <div key={c.id} className={`matrix-row ${c.state}`}>
-                      <div className="matrix-cell name">{c.name}</div>
-                      <div className="matrix-cell">
-                        <span className={`state-pill ${c.state}`}>{c.state}</span>
-                      </div>
-                      <div className="matrix-cell">
-                        <div className="inline-bar">
-                          <div className="inline-bar-fill amber" style={{ width: `${Math.min(m.cpu_percent || 0, 100)}%` }} />
+                ) : (
+                  <div className="cpu-time-bars">
+                    {containers.map((c, i) => {
+                      const m = metrics[c.id] || {}
+                      const cpuUsec = m.cpu_usec || 0
+                      const cpuTimeSeconds = cpuUsec / 1000000
+                      const maxCpuTime = Math.max(...containers.map(x => (metrics[x.id]?.cpu_usec || 0) / 1000000), 1)
+                      const barPercent = (cpuTimeSeconds / maxCpuTime) * 100
+                      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4']
+                      const color = colors[i % colors.length]
+                      
+                      const formatCpuTime = (seconds) => {
+                        if (seconds >= 3600) return `${(seconds / 3600).toFixed(2)}h`
+                        if (seconds >= 60) return `${(seconds / 60).toFixed(2)}m`
+                        if (seconds >= 1) return `${seconds.toFixed(2)}s`
+                        return `${(seconds * 1000).toFixed(2)}ms`
+                      }
+                      
+                      return (
+                        <div key={c.id} className="cpu-time-bar-row">
+                          <div className="cpu-time-label">
+                            <span className="cpu-time-name">{c.name}</span>
+                            <span className={`cpu-time-state ${c.state}`}>{c.state}</span>
+                          </div>
+                          <div className="cpu-time-bar-container">
+                            <div 
+                              className="cpu-time-bar-fill" 
+                              style={{ 
+                                width: `${barPercent}%`,
+                                background: `linear-gradient(90deg, ${color}, ${color}dd)`
+                              }} 
+                            />
+                          </div>
+                          <div className="cpu-time-value" style={{ color }}>
+                            {formatCpuTime(cpuTimeSeconds)}
+                          </div>
                         </div>
-                        <span className="inline-value">{(m.cpu_percent || 0).toFixed(1)}%</span>
-                      </div>
-                      <div className="matrix-cell">
-                        <div className="inline-bar">
-                          <div className="inline-bar-fill cyan" style={{ width: `${Math.min(((m.memory_bytes || 0) / (m.memory_limit || 134217728)) * 100, 100)}%` }} />
-                        </div>
-                        <span className="inline-value">{formatBytes(m.memory_bytes || 0)}</span>
-                      </div>
-                      <div className="matrix-cell">
-                        <span className={`health-badge ${health >= 80 ? 'good' : health >= 50 ? 'warn' : 'bad'}`}>
-                          {health.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="matrix-cell">
-                        <TrendIndicator trend={analytics.trend} />
-                      </div>
-                    </div>
-                  )
-                })}
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2186,41 +2186,6 @@ function App() {
                     <span>Create containers to see performance insights</span>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="insights-section">
-              <h3><Icons.Zap /> Quick Actions</h3>
-              <div className="quick-actions">
-                <a 
-                  className="quick-action" 
-                  href={`${API_URL}/api/export/csv`} 
-                  download 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
-                  <Icons.Download />
-                  <span>Export Metrics</span>
-                </a>
-                <a 
-                  className="quick-action" 
-                  href={`${API_URL}/api/export/anomalies`} 
-                  download 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
-                  <Icons.AlertTriangle />
-                  <span>Export Anomalies</span>
-                </a>
-                <button className="quick-action" onClick={fetchContainers}>
-                  <Icons.Refresh />
-                  <span>Refresh Data</span>
-                </button>
-                <button className="quick-action" onClick={() => setShowCreateModal(true)}>
-                  <Icons.Plus />
-                  <span>New Container</span>
-                </button>
               </div>
             </div>
           </div>

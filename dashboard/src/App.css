@@ -4150,3 +4150,85 @@ body {
   font-size: 0.85rem;
   font-weight: 500;
 }
+
+/* CPU Time Bar Graph */
+.cpu-time-chart {
+  padding: 8px 0;
+}
+
+.chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+.chart-empty svg {
+  width: 32px;
+  height: 32px;
+  opacity: 0.5;
+}
+
+.cpu-time-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cpu-time-bar-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 80px;
+  align-items: center;
+  gap: 16px;
+}
+
+.cpu-time-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cpu-time-name {
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.cpu-time-state {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cpu-time-state.running {
+  color: var(--green);
+}
+
+.cpu-time-state.stopped {
+  color: var(--text-muted);
+}
+
+.cpu-time-bar-container {
+  height: 24px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+}
+
+.cpu-time-bar-fill {
+  height: 100%;
+  border-radius: var(--radius);
+  transition: width 0.5s ease;
+  min-width: 4px;
+}
+
+.cpu-time-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: right;
+}
