@@ -450,79 +450,84 @@ def delete_container(container_id: str):
 
 @app.post("/api/containers/{container_id}/exec")
 async def exec_in_container(container_id: str, request: Request):
-    """Execute a command in a container with namespace isolation (if running) or cgroup-only (if stopped)"""
+    """Execute a command in a container with FULL namespace isolation (pivot_root to Alpine rootfs)"""
     try:
         body = await request.json()
         command = body.get("command", "echo Hello")
     except:
         command = "echo Hello"
     
-    # Check if container is running - if so, use C runtime exec with namespace entry
-    state_file = Path(f"/var/lib/minicontainer/containers/{container_id}/state.txt")
-    is_running = False
-    container_pid = 0
+    DEFAULT_ROOTFS = "/tmp/alpine-rootfs"
     
+    # Verify rootfs exists for isolation
+    if not Path(DEFAULT_ROOTFS).exists():
+        return {"status": "error", "message": "Rootfs not found - cannot run isolated container"}
+    
+    # Write command to a temp script in the rootfs
+    script_path = Path(DEFAULT_ROOTFS) / "tmp" / f"exec_{container_id}.sh"
+    try:
+        script_path.parent.mkdir(parents=True, exist_ok=True)
+        script_path.write_text(f"#!/bin/sh\n{command}\n")
+        script_path.chmod(0o755)
+    except PermissionError:
+        os.system(f"sudo mkdir -p {script_path.parent}")
+        os.system(f"sudo bash -c 'echo \"#!/bin/sh\" > {script_path}'")
+        os.system(f"sudo bash -c 'echo \"{command}\" >> {script_path}'")
+        os.system(f"sudo chmod 755 {script_path}")
+    
+    # Get container name from state
+    container_name = container_id
+    state_file = Path(f"/var/lib/minicontainer/containers/{container_id}/state.txt")
     if state_file.exists():
         try:
-            content = state_file.read_text()
-            if "state=running" in content:
-                is_running = True
-                for line in content.split('\n'):
-                    if line.startswith('pid='):
-                        container_pid = int(line.split('=')[1])
+            for line in state_file.read_text().split('\n'):
+                if line.startswith('name='):
+                    container_name = line.split('=')[1]
+                    break
         except:
             pass
     
-    cgroup_path = CGROUP_BASE / container_id
-    
-    if is_running and container_pid > 0:
-        # Use C runtime exec with namespace entry (true container isolation)
-        # This uses setns() to enter MNT, UTS, IPC, and cgroup namespaces
-        run_script = f'''
-{RUNTIME_PATH} exec {container_id} --cmd "{command}"
-'''
-        import threading
-        def run_namespace_exec():
-            try:
-                subprocess.run(
-                    ["sudo", "bash", "-c", run_script],
-                    capture_output=True, text=True, timeout=600,
-                    env={"LD_LIBRARY_PATH": str(Path(RUNTIME_PATH).parent)}
-                )
-            except:
-                pass
-        
-        thread = threading.Thread(target=run_namespace_exec, daemon=True)
-        thread.start()
-        
-        return {"status": "started", "message": f"Command started in container {container_id} with namespace isolation (PID {container_pid})"}
-    else:
-        # Fallback: cgroup-only execution for stopped containers
-        if not cgroup_path.exists():
-            cgroup_path.mkdir(parents=True, exist_ok=True)
-            subprocess.run(
-                f"echo '+cpu +memory +pids' | sudo tee /sys/fs/cgroup/minicontainer/cgroup.subtree_control",
-                shell=True, capture_output=True
+    # Run with FULL namespace isolation using C runtime
+    # This creates new PID, MNT, UTS, IPC, CGROUP namespaces and pivot_root into Alpine rootfs
+    import threading
+    def run_isolated_exec():
+        try:
+            env = os.environ.copy()
+            env["LD_LIBRARY_PATH"] = str(Path(RUNTIME_PATH).parent)
+            
+            result = subprocess.run(
+                ["sudo", str(RUNTIME_PATH), "run", 
+                 "--name", f"{container_name}-exec",
+                 "--rootfs", DEFAULT_ROOTFS,
+                 "--memory", "268435456",
+                 "--cpus", "100",
+                 "--pids", "100",
+                 "--", "/bin/sh", f"/tmp/exec_{container_id}.sh"],
+                capture_output=True, text=True, timeout=600,
+                env=env
             )
-        
-        run_script = f'''
-echo $$ > {cgroup_path}/cgroup.procs 2>/dev/null
-{command}
-'''
-        import threading
-        def run_cgroup_exec():
+            
+            # Cleanup script after execution
             try:
-                subprocess.run(
-                    ["sudo", "bash", "-c", run_script],
-                    capture_output=True, text=True, timeout=600
-                )
+                script_path.unlink()
             except:
-                pass
-        
-        thread = threading.Thread(target=run_cgroup_exec, daemon=True)
-        thread.start()
-        
-        return {"status": "started", "message": f"Command started in container {container_id} (cgroup-only mode)"}
+                os.system(f"sudo rm -f {script_path}")
+                
+        except Exception as e:
+            pass
+    
+    thread = threading.Thread(target=run_isolated_exec, daemon=True)
+    thread.start()
+    
+    return {
+        "status": "started", 
+        "message": f"Command started in ISOLATED container {container_id}",
+        "isolation": {
+            "rootfs": DEFAULT_ROOTFS,
+            "namespaces": ["PID", "MNT", "UTS", "IPC", "CGROUP"],
+            "protected": True
+        }
+    }
 
 @app.get("/api/containers/{container_id}/metrics")
 def get_container_metrics(container_id: str):

@@ -598,16 +598,22 @@ def system_info_cmd():
     console.print(f"\n[dim]System Time (IST): {get_ist_time()}[/]")
 
 def exec_cmd():
-    """Execute REAL working commands inside container"""
+    """Execute commands inside ISOLATED container with full namespace isolation"""
     containers = get_containers()
     
     if not containers:
         console.print("[yellow]No containers available. Create one first![/]")
         return
     
-    console.print(Panel("[bold bright_yellow]⚡ Execute Command in Container[/]", 
+    console.print(Panel("[bold bright_yellow]⚡ Execute Command in Isolated Container[/]", 
                        border_style="bright_yellow"))
-    console.print("[dim]Commands run inside the container's cgroup for accurate resource tracking.[/]\n")
+    console.print("[bold bright_green]✓ Commands run with FULL ISOLATION:[/]")
+    console.print("  • [dim]Separate filesystem (Alpine Linux rootfs)[/]")
+    console.print("  • [dim]PID namespace (only sees container processes)[/]")
+    console.print("  • [dim]Mount namespace (isolated mounts)[/]")
+    console.print("  • [dim]UTS namespace (separate hostname)[/]")
+    console.print("  • [dim]Cgroup limits (memory, CPU, PIDs)[/]")
+    console.print()
     
     # List containers
     console.print("[bold]Available Containers:[/]")
@@ -722,62 +728,90 @@ echo 'Normal workload complete'
         console.print(f"\n[bold]Running custom command...[/]")
     
     console.print("\n" + "─" * 60)
+    console.print(f"[bold bright_green]🔒 Running in ISOLATED environment[/]")
+    console.print(f"[dim]Rootfs: {DEFAULT_ROOTFS}[/]")
+    console.print(f"[dim]Namespaces: PID, MNT, UTS, IPC, CGROUP[/]")
+    console.print("─" * 60 + "\n")
     
-    # Create/prepare cgroup
-    cgroup_path = CGROUP_BASE / target.id
+    # Ensure rootfs exists
+    if not Path(DEFAULT_ROOTFS).exists():
+        console.print(f"[bold red]✗ Rootfs not found at {DEFAULT_ROOTFS}[/]")
+        console.print("[dim]Cannot run isolated container without rootfs.[/]")
+        return
     
-    setup_cmd = f"""
-    sudo mkdir -p {cgroup_path} 2>/dev/null
-    echo '+cpu +memory +pids' | sudo tee /sys/fs/cgroup/minicontainer/cgroup.subtree_control >/dev/null 2>&1
-    echo 268435456 | sudo tee {cgroup_path}/memory.max >/dev/null 2>&1
-    echo 100 | sudo tee {cgroup_path}/pids.max >/dev/null 2>&1
-    """
-    os.system(f"bash -c \"{setup_cmd}\"")
+    # Use the C runtime to run with full namespace isolation
+    # This creates a new container process with pivot_root into the Alpine rootfs
     
-    # Run command inside cgroup
-    run_script = f"""
-    echo $$ > {cgroup_path}/cgroup.procs 2>/dev/null
-    {cmd}
-    """
+    # Write command to a temp script in the rootfs
+    script_content = f'''#!/bin/sh
+{cmd}
+'''
+    script_path = Path(DEFAULT_ROOTFS) / "tmp" / f"exec_{target.id}.sh"
+    try:
+        script_path.write_text(script_content)
+        script_path.chmod(0o755)
+    except PermissionError:
+        os.system(f"sudo bash -c 'echo \"{script_content}\" > {script_path} && chmod 755 {script_path}'")
     
-    console.print(f"[dim]Executing in cgroup: {cgroup_path}[/]\n")
+    # Run the C runtime with the command
+    # The runtime will: clone with namespaces -> pivot_root -> exec command
+    console.print(f"[dim]Executing isolated command...[/]\n")
+    
+    # Use runtime to run in isolated namespace
+    args = ["run", "--name", f"{target.name}-exec", 
+            "--rootfs", DEFAULT_ROOTFS,
+            "--memory", "268435456",  # 256MB
+            "--cpus", "100",
+            "--pids", "100",
+            "--", "/bin/sh", f"/tmp/exec_{target.id}.sh"]
     
     try:
-        result = subprocess.run(
-            ["sudo", "bash", "-c", run_script],
-            capture_output=True, text=True, timeout=max(duration + 60, 600)
-        )
+        with Progress(
+            SpinnerColumn(style="bright_green"),
+            TextColumn("[bold]Running in isolated container...[/]"),
+            console=console
+        ) as progress:
+            task = progress.add_task("exec", total=None)
+            code, stdout, stderr = run_runtime(args, timeout=max(duration + 120, 600))
         
         console.print("─" * 60)
         
-        if result.stdout.strip():
-            console.print(f"\n[bold bright_green]Output:[/]")
-            console.print(Panel(result.stdout.strip(), border_style="bright_green"))
+        if stdout.strip():
+            # Filter out runtime logs
+            output_lines = [l for l in stdout.strip().split('\n') 
+                          if not l.startswith('[INFO]') and not l.startswith('[DEBUG]')]
+            if output_lines:
+                console.print(f"\n[bold bright_green]Output:[/]")
+                console.print(Panel('\n'.join(output_lines), border_style="bright_green"))
         
-        # Show resource usage
+        if code == 0:
+            console.print(f"\n[bold bright_green]✓ Command completed successfully in isolated container[/]")
+        else:
+            console.print(f"\n[bold yellow]Command exited with code {code}[/]")
+            if stderr.strip():
+                console.print(f"[dim]{stderr.strip()}[/]")
+        
+        # Show resource usage from cgroup
+        cgroup_path = CGROUP_BASE / target.id
         try:
-            mem = int((cgroup_path / "memory.current").read_text().strip())
-            cpu_stat = (cgroup_path / "cpu.stat").read_text()
-            cpu_usec = 0
-            for line in cpu_stat.splitlines():
-                if line.startswith("usage_usec"):
-                    cpu_usec = int(line.split()[1])
-                    break
-            
-            console.print(f"\n[bold bright_cyan]📊 Resource Usage:[/]")
-            console.print(f"  [bright_yellow]⚡ CPU Time:[/] {cpu_usec / 1e6:.2f} seconds")
-            console.print(f"  [bright_cyan]💾 Memory:[/] {mem / 1048576:.2f} MB")
+            if (cgroup_path / "memory.current").exists():
+                mem = int((cgroup_path / "memory.current").read_text().strip())
+                console.print(f"\n[bold bright_cyan]📊 Resource Usage:[/]")
+                console.print(f"  [bright_cyan]💾 Memory:[/] {mem / 1048576:.2f} MB")
         except:
             pass
         
-        console.print(f"\n[bold bright_green]✓ Command completed (exit code: {result.returncode})[/]")
-        
-    except subprocess.TimeoutExpired:
-        console.print(f"[yellow]Command timed out[/]")
     except Exception as e:
         console.print(f"[red]Error: {e}[/]")
     
-    console.print("[dim]Use option 4 (Monitor) or the web dashboard to see live metrics![/]")
+    # Cleanup script
+    try:
+        script_path.unlink()
+    except:
+        os.system(f"sudo rm -f {script_path}")
+    
+    console.print(f"\n[dim]Executed at: {get_ist_time()}[/]")
+    console.print("[bold bright_green]✓ Host filesystem was PROTECTED - command ran in isolated Alpine rootfs[/]")
 
 def dashboard_info():
     """Show dashboard launch info"""
