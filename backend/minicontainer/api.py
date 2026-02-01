@@ -56,9 +56,9 @@ class ConnectionManager:
 ws_manager = ConnectionManager()
 
 # Runtime path
-RUNTIME_PATH = Path("/home/student/.gemini/antigravity/scratch/minicontainer/runtime/build/minicontainer-runtime")
+RUNTIME_PATH = Path("/home/student/container/runtime/build/minicontainer-runtime")
 CGROUP_BASE = Path("/sys/fs/cgroup/minicontainer")
-DASHBOARD_DIST = Path("/home/student/.gemini/antigravity/scratch/minicontainer/dashboard/dist")
+DASHBOARD_DIST = Path("/home/student/container/dashboard/dist")
 
 def run_runtime_command(args: List[str]) -> tuple:
     """Run the C runtime CLI and return output"""
@@ -347,49 +347,108 @@ def get_container(container_id: str):
 
 @app.post("/api/containers", response_model=ContainerResponse)
 def create_container(config: ContainerCreate):
-    """Create a new container (without starting a command)"""
+    """Create a container (without starting it)"""
+    import random
     
-    create_args = ["create", "--name", config.name]
+    DEFAULT_ROOTFS = "/tmp/alpine-rootfs"
+    rootfs = config.rootfs or DEFAULT_ROOTFS
     
-    if config.rootfs:
-        create_args.extend(["--rootfs", config.rootfs])
-    if config.memory_limit:
-        create_args.extend(["--memory", str(config.memory_limit)])
-    if config.cpu_percent:
-        create_args.extend(["--cpus", str(config.cpu_percent)])
-    if config.pids_max:
-        create_args.extend(["--pids", str(config.pids_max)])
+    # Verify rootfs exists
+    if not Path(rootfs).exists():
+        raise HTTPException(status_code=400, detail=f"Rootfs not found at {rootfs}")
     
-    code, stdout, stderr = run_runtime_command(create_args)
-    if code != 0:
-        raise HTTPException(status_code=500, detail=f"Failed to create container: {stderr}")
+    # Generate container name/ID
+    container_name = config.name or f"container-{random.randint(1000,9999)}"
     
-    # Parse container ID from output
-    container_id = config.name
-    for line in stdout.splitlines():
-        if "Created container:" in line:
-            container_id = line.split(":")[-1].strip()
-            break
+    # Create cgroup for this container
+    cgroup_path = f"/sys/fs/cgroup/minicontainer/{container_name}"
+    subprocess.run(["sudo", "mkdir", "-p", cgroup_path], check=False)
     
-    # Get PID from state file
-    pid = 0
-    try:
-        state_file = Path(f"/var/lib/minicontainer/containers/{container_id}/state.txt")
-        if state_file.exists():
-            for line in state_file.read_text().splitlines():
-                if line.startswith("pid="):
-                    pid = int(line.split("=")[1])
-                    break
-    except:
-        pass
+    # Set resource limits
+    mem_limit = config.memory_limit or 268435456
+    cpu_pct = config.cpu_percent or 50
+    pids_max = config.pids_max or 100
     
-    return ContainerResponse(id=container_id, name=config.name, state="created", pid=pid)
+    subprocess.run(f"echo {mem_limit} | sudo tee {cgroup_path}/memory.max", shell=True, capture_output=True)
+    subprocess.run(f"echo '{cpu_pct}000 100000' | sudo tee {cgroup_path}/cpu.max", shell=True, capture_output=True)
+    subprocess.run(f"echo {pids_max} | sudo tee {cgroup_path}/pids.max", shell=True, capture_output=True)
+    
+    # Create init script (for when container is started)
+    init_script = f"""#!/bin/sh
+echo "Container {container_name} started"
+trap 'exit 0' TERM INT
+while true; do sleep 1; done
+"""
+    
+    # Write init script
+    init_path = f"{rootfs}/tmp/init_{container_name}.sh"
+    subprocess.run(["sudo", "mkdir", "-p", f"{rootfs}/tmp"], check=False)
+    
+    with open("/tmp/init_temp.sh", "w") as f:
+        f.write(init_script)
+    subprocess.run(["sudo", "cp", "/tmp/init_temp.sh", init_path], check=False)
+    subprocess.run(["sudo", "chmod", "755", init_path], check=False)
+    
+    # Save state as "created" (not running)
+    state_dir = f"/var/lib/minicontainer/containers/{container_name}"
+    subprocess.run(["sudo", "mkdir", "-p", state_dir], check=False)
+    state = f"id={container_name}\\nname={container_name}\\nstate=created\\npid=0\\nrootfs={rootfs}"
+    subprocess.run(f"echo -e '{state}' | sudo tee {state_dir}/state.txt > /dev/null", shell=True)
+    
+    return ContainerResponse(id=container_name, name=container_name, state="created", pid=0)
 
 @app.post("/api/containers/{container_id}/start")
 def start_container(container_id: str):
     """Start a container"""
-    code, stdout, stderr = run_runtime_command(["start", container_id])
-    return {"status": "started" if code == 0 else "failed"}
+    import threading
+    
+    # Find container state
+    state_dir = Path(f"/var/lib/minicontainer/containers/{container_id}")
+    state_file = state_dir / "state.txt"
+    
+    if not state_file.exists():
+        raise HTTPException(status_code=404, detail="Container not found")
+    
+    # Read rootfs from state
+    rootfs = "/tmp/alpine-rootfs"
+    try:
+        for line in state_file.read_text().splitlines():
+            if line.startswith("rootfs="):
+                rootfs = line.split("=", 1)[1]
+    except:
+        pass
+    
+    cgroup_path = f"/sys/fs/cgroup/minicontainer/{container_id}"
+    
+    # Start the container process
+    def run_container():
+        try:
+            cmd = f"sudo bash -c 'echo $$ > {cgroup_path}/cgroup.procs; exec chroot {rootfs} /bin/sh /tmp/init_{container_id}.sh'"
+            subprocess.run(cmd, shell=True, timeout=86400, capture_output=True)
+        except:
+            pass
+    
+    thread = threading.Thread(target=run_container, daemon=True)
+    thread.start()
+    
+    # Wait for process to start
+    time.sleep(0.5)
+    
+    # Get PID
+    pid = 0
+    try:
+        result = subprocess.run(["cat", f"{cgroup_path}/cgroup.procs"], capture_output=True, text=True)
+        procs = result.stdout.strip()
+        if procs:
+            pid = int(procs.split('\n')[0])
+    except:
+        pass
+    
+    # Update state
+    state = f"id={container_id}\\nname={container_id}\\nstate=running\\npid={pid}\\nrootfs={rootfs}"
+    subprocess.run(f"echo -e '{state}' | sudo tee {state_file} > /dev/null", shell=True)
+    
+    return {"status": "started", "pid": pid}
 
 @app.post("/api/containers/{container_id}/stop")
 def stop_container(container_id: str):
@@ -450,7 +509,7 @@ def delete_container(container_id: str):
 
 @app.post("/api/containers/{container_id}/exec")
 async def exec_in_container(container_id: str, request: Request):
-    """Execute a command in a container with FULL namespace isolation (pivot_root to Alpine rootfs)"""
+    """Execute a command inside an existing container's cgroup"""
     try:
         body = await request.json()
         command = body.get("command", "echo Hello")
@@ -459,75 +518,42 @@ async def exec_in_container(container_id: str, request: Request):
     
     DEFAULT_ROOTFS = "/tmp/alpine-rootfs"
     
-    # Verify rootfs exists for isolation
+    # Verify rootfs exists
     if not Path(DEFAULT_ROOTFS).exists():
-        return {"status": "error", "message": "Rootfs not found - cannot run isolated container"}
+        return {"status": "error", "message": "Rootfs not found"}
     
-    # Write command to a temp script in the rootfs
-    script_path = Path(DEFAULT_ROOTFS) / "tmp" / f"exec_{container_id}.sh"
-    try:
-        script_path.parent.mkdir(parents=True, exist_ok=True)
-        script_path.write_text(f"#!/bin/sh\n{command}\n")
-        script_path.chmod(0o755)
-    except PermissionError:
-        os.system(f"sudo mkdir -p {script_path.parent}")
-        os.system(f"sudo bash -c 'echo \"#!/bin/sh\" > {script_path}'")
-        os.system(f"sudo bash -c 'echo \"{command}\" >> {script_path}'")
-        os.system(f"sudo chmod 755 {script_path}")
+    # Find the container's cgroup (use string path)
+    cgroup_path = f"/sys/fs/cgroup/minicontainer/{container_id}"
+    if not Path(cgroup_path).exists():
+        return {"status": "error", "message": f"Container not found: {container_id}"}
     
-    # Get container name from state
-    container_name = container_id
-    state_file = Path(f"/var/lib/minicontainer/containers/{container_id}/state.txt")
-    if state_file.exists():
-        try:
-            for line in state_file.read_text().split('\n'):
-                if line.startswith('name='):
-                    container_name = line.split('=')[1]
-                    break
-        except:
-            pass
+    # Write command to a script
+    import random, string
+    exec_id = ''.join(random.choices(string.ascii_lowercase, k=6))
+    script_name = f"exec_{exec_id}.sh"
+    script_path = f"{DEFAULT_ROOTFS}/tmp/{script_name}"
     
-    # Run with FULL namespace isolation using C runtime
-    # This creates new PID, MNT, UTS, IPC, CGROUP namespaces and pivot_root into Alpine rootfs
+    # Write script
+    script_content = f"#!/bin/sh\n{command}\n"
+    with open("/tmp/exec_temp.sh", "w") as f:
+        f.write(script_content)
+    subprocess.run(["sudo", "cp", "/tmp/exec_temp.sh", script_path], check=False)
+    subprocess.run(["sudo", "chmod", "755", script_path], check=False)
+    
+    # Run the command in the container's cgroup with chroot isolation
     import threading
-    def run_isolated_exec():
+    def run_in_cgroup():
         try:
-            env = os.environ.copy()
-            env["LD_LIBRARY_PATH"] = str(Path(RUNTIME_PATH).parent)
-            
-            result = subprocess.run(
-                ["sudo", str(RUNTIME_PATH), "run", 
-                 "--name", f"{container_name}-exec",
-                 "--rootfs", DEFAULT_ROOTFS,
-                 "--memory", "268435456",
-                 "--cpus", "100",
-                 "--pids", "100",
-                 "--", "/bin/sh", f"/tmp/exec_{container_id}.sh"],
-                capture_output=True, text=True, timeout=600,
-                env=env
-            )
-            
-            # Cleanup script after execution
-            try:
-                script_path.unlink()
-            except:
-                os.system(f"sudo rm -f {script_path}")
-                
+            cmd = f"sudo bash -c 'echo $$ > {cgroup_path}/cgroup.procs; exec chroot {DEFAULT_ROOTFS} /bin/sh /tmp/{script_name}'"
+            subprocess.run(cmd, shell=True, timeout=600, capture_output=True)
+            subprocess.run(["sudo", "rm", "-f", script_path], check=False)
         except Exception as e:
-            pass
+            print(f"Exec failed: {e}")
     
-    thread = threading.Thread(target=run_isolated_exec, daemon=True)
+    thread = threading.Thread(target=run_in_cgroup, daemon=True)
     thread.start()
     
-    return {
-        "status": "started", 
-        "message": f"Command started in ISOLATED container {container_id}",
-        "isolation": {
-            "rootfs": DEFAULT_ROOTFS,
-            "namespaces": ["PID", "MNT", "UTS", "IPC", "CGROUP"],
-            "protected": True
-        }
-    }
+    return {"status": "started", "message": f"Command started in container {container_id}"}
 
 @app.get("/api/containers/{container_id}/metrics")
 def get_container_metrics(container_id: str):

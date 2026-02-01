@@ -95,9 +95,29 @@ int fs_mount_essentials(void) {
 }
 
 int fs_setup(container_t *container) {
-    if (!container->config.rootfs[0]) return MC_OK;
-    if (!dir_exists(container->config.rootfs)) return MC_ERR_FILESYSTEM;
-    mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL);
+    if (!container->config.rootfs[0]) {
+        mc_log(3, "ERROR: No rootfs specified - refusing to run without filesystem isolation!");
+        return MC_ERR_FILESYSTEM;  /* REQUIRE rootfs for safety */
+    }
+    if (!dir_exists(container->config.rootfs)) {
+        mc_log(3, "ERROR: Rootfs does not exist: %s", container->config.rootfs);
+        return MC_ERR_FILESYSTEM;
+    }
+    
+    /* Perform full filesystem isolation using pivot_root */
+    int ret = fs_pivot_root(container->config.rootfs);
+    if (ret != MC_OK) {
+        mc_log(3, "ERROR: pivot_root failed - cannot ensure filesystem isolation!");
+        return ret;
+    }
+    
+    /* Mount essential filesystems inside the isolated root */
+    ret = fs_mount_essentials();
+    if (ret != MC_OK) {
+        mc_log(2, "Warning: Some essential mounts may have failed");
+    }
+    
+    mc_log(1, "Filesystem isolation complete with rootfs: %s", container->config.rootfs);
     return MC_OK;
 }
 

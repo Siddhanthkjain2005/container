@@ -132,15 +132,22 @@ static int container_child(void *arg) {
         exit(1);
     }
     
-    /* Set up mount namespace and filesystem */
-    if (strlen(config->rootfs) > 0) {
-        if (fs_pivot_root(config->rootfs) != MC_OK) {
-            exit(1);
-        }
-        
-        if (fs_mount_essentials() != MC_OK) {
-            exit(1);
-        }
+    /* CRITICAL: Set up mount namespace and filesystem isolation */
+    /* Rootfs is REQUIRED for safe container isolation */
+    if (strlen(config->rootfs) == 0) {
+        mc_log(3, "FATAL: No rootfs specified - refusing to run without filesystem isolation!");
+        mc_log(3, "This is a security requirement to prevent host filesystem access.");
+        exit(1);
+    }
+    
+    if (fs_pivot_root(config->rootfs) != MC_OK) {
+        mc_log(3, "FATAL: pivot_root failed - cannot ensure filesystem isolation!");
+        exit(1);
+    }
+    
+    if (fs_mount_essentials() != MC_OK) {
+        mc_log(2, "Warning: Some essential mounts may have failed");
+        /* Continue anyway - basic isolation is in place */
     }
     
     /* Set environment variables */
