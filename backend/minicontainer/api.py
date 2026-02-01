@@ -530,12 +530,12 @@ async def exec_in_container(container_id: str, request: Request):
     
     # Verify rootfs exists
     if not Path(DEFAULT_ROOTFS).exists():
-        return {"status": "error", "message": "Rootfs not found"}
+        return {"status": "error", "message": "Rootfs not found", "output": ""}
     
     # Find the container's cgroup (use string path)
     cgroup_path = f"/sys/fs/cgroup/minicontainer/{container_id}"
     if not Path(cgroup_path).exists():
-        return {"status": "error", "message": f"Container not found: {container_id}"}
+        return {"status": "error", "message": f"Container not found: {container_id}", "output": ""}
     
     # Write command to a script
     import random, string
@@ -550,37 +550,38 @@ async def exec_in_container(container_id: str, request: Request):
     subprocess.run(["sudo", "cp", "/tmp/exec_temp.sh", script_path], check=False)
     subprocess.run(["sudo", "chmod", "755", script_path], check=False)
     
-    # Run the command in the container using nsenter to join its namespaces
-    import threading
-    def run_in_cgroup():
+    # Run the command SYNCHRONOUSLY and capture output
+    try:
+        # Get the first PID in the container's cgroup to use as target for nsenter
+        procs_file = f"{cgroup_path}/cgroup.procs"
+        target_pid = None
         try:
-            # Get the first PID in the container's cgroup to use as target for nsenter
-            procs_file = f"{cgroup_path}/cgroup.procs"
-            target_pid = None
-            try:
-                with open(procs_file, 'r') as f:
-                    procs = f.read().strip().split('\n')
-                    if procs and procs[0]:
-                        target_pid = procs[0]
-            except:
-                pass
-            
-            if target_pid:
-                # Use nsenter to join the container's namespaces and execute command
-                cmd = f"sudo nsenter --target {target_pid} --mount --uts --ipc --pid /bin/sh /tmp/{script_name}"
-            else:
-                # Fallback: create new namespaces (container might not be running)
-                cmd = f"sudo unshare --mount --pid --uts --ipc --fork bash -c 'echo $$ > {cgroup_path}/cgroup.procs; mount --make-rprivate /; exec chroot {DEFAULT_ROOTFS} /bin/sh /tmp/{script_name}'"
-            
-            subprocess.run(cmd, shell=True, timeout=600, capture_output=True)
-            subprocess.run(["sudo", "rm", "-f", script_path], check=False)
-        except Exception as e:
-            print(f"Exec failed: {e}")
-    
-    thread = threading.Thread(target=run_in_cgroup, daemon=True)
-    thread.start()
-    
-    return {"status": "started", "message": f"Command started in container {container_id}"}
+            with open(procs_file, 'r') as f:
+                procs = f.read().strip().split('\n')
+                if procs and procs[0]:
+                    target_pid = procs[0]
+        except:
+            pass
+        
+        if target_pid:
+            # Use nsenter to join the container's namespaces and execute command
+            cmd = f"sudo nsenter --target {target_pid} --mount --uts --ipc --pid /bin/sh /tmp/{script_name}"
+        else:
+            # Fallback: create new namespaces (container might not be running)
+            cmd = f"sudo unshare --mount --pid --uts --ipc --fork bash -c 'echo $$ > {cgroup_path}/cgroup.procs; mount --make-rprivate /; exec chroot {DEFAULT_ROOTFS} /bin/sh /tmp/{script_name}'"
+        
+        # Execute and capture output
+        result = subprocess.run(cmd, shell=True, timeout=30, capture_output=True, text=True)
+        output = result.stdout + result.stderr
+        subprocess.run(["sudo", "rm", "-f", script_path], check=False)
+        
+        return {"status": "success", "message": "Command executed", "output": output, "exit_code": result.returncode}
+    except subprocess.TimeoutExpired:
+        subprocess.run(["sudo", "rm", "-f", script_path], check=False)
+        return {"status": "error", "message": "Command timed out (30s)", "output": "", "exit_code": -1}
+    except Exception as e:
+        subprocess.run(["sudo", "rm", "-f", script_path], check=False)
+        return {"status": "error", "message": f"Exec failed: {str(e)}", "output": "", "exit_code": -1}
 
 @app.get("/api/containers/{container_id}/metrics")
 def get_container_metrics(container_id: str):
