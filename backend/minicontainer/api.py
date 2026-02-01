@@ -571,14 +571,14 @@ async def exec_in_container(container_id: str, request: Request):
             cmd = f"sudo unshare --mount --pid --uts --ipc --fork bash -c 'echo $$ > {cgroup_path}/cgroup.procs; mount --make-rprivate /; exec chroot {DEFAULT_ROOTFS} /bin/sh /tmp/{script_name}'"
         
         # Execute and capture output
-        result = subprocess.run(cmd, shell=True, timeout=30, capture_output=True, text=True)
+        result = subprocess.run(cmd, shell=True, timeout=300, capture_output=True, text=True)
         output = result.stdout + result.stderr
         subprocess.run(["sudo", "rm", "-f", script_path], check=False)
         
         return {"status": "success", "message": "Command executed", "output": output, "exit_code": result.returncode}
     except subprocess.TimeoutExpired:
         subprocess.run(["sudo", "rm", "-f", script_path], check=False)
-        return {"status": "error", "message": "Command timed out (30s)", "output": "", "exit_code": -1}
+        return {"status": "error", "message": "Command timed out (300s)", "output": "", "exit_code": -1}
     except Exception as e:
         subprocess.run(["sudo", "rm", "-f", script_path], check=False)
         return {"status": "error", "message": f"Exec failed: {str(e)}", "output": "", "exit_code": -1}
