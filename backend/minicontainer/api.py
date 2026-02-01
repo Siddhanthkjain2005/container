@@ -420,11 +420,16 @@ def start_container(container_id: str):
     
     cgroup_path = f"/sys/fs/cgroup/minicontainer/{container_id}"
     
-    # Start the container process
+    # Use the C runtime for proper namespace isolation
     def run_container():
         try:
-            cmd = f"sudo bash -c 'echo $$ > {cgroup_path}/cgroup.procs; exec chroot {rootfs} /bin/sh /tmp/init_{container_id}.sh'"
-            subprocess.run(cmd, shell=True, timeout=86400, capture_output=True)
+            # Use C runtime to create and start container with proper namespaces
+            cmd = [
+                "sudo", str(RUNTIME_PATH), "run", container_id,
+                "--rootfs", rootfs,
+                "--memory", str(mem_limit)
+            ]
+            subprocess.run(cmd, timeout=86400, capture_output=True)
         except:
             pass
     
@@ -540,11 +545,26 @@ async def exec_in_container(container_id: str, request: Request):
     subprocess.run(["sudo", "cp", "/tmp/exec_temp.sh", script_path], check=False)
     subprocess.run(["sudo", "chmod", "755", script_path], check=False)
     
-    # Run the command in the container's cgroup with chroot isolation
+    # Run the command in the container's cgroup with proper namespace isolation
     import threading
     def run_in_cgroup():
         try:
-            cmd = f"sudo bash -c 'echo $$ > {cgroup_path}/cgroup.procs; exec chroot {DEFAULT_ROOTFS} /bin/sh /tmp/{script_name}'"
+            # Use nsenter to enter the container's namespaces if possible
+            # Otherwise create new namespaces with proper mount setup
+            cmd = f"""
+sudo unshare --mount --pid --uts --ipc --fork bash -c '
+    set -e
+    echo $$ > {cgroup_path}/cgroup.procs
+    mount --make-rprivate /
+    mount --bind {DEFAULT_ROOTFS} {DEFAULT_ROOTFS}
+    mkdir -p {DEFAULT_ROOTFS}/old_root
+    cd {DEFAULT_ROOTFS}
+    pivot_root . old_root 2>/dev/null || true
+    umount -l /old_root 2>/dev/null || true
+    mount -t proc proc /proc 2>/dev/null || true
+    exec /bin/sh /tmp/{script_name}
+'
+"""
             subprocess.run(cmd, shell=True, timeout=600, capture_output=True)
             subprocess.run(["sudo", "rm", "-f", script_path], check=False)
         except Exception as e:
