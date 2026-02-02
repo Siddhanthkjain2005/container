@@ -7,7 +7,7 @@
 | **OS** | Linux (Ubuntu 20.04+) |
 | **Kernel** | 5.4+ with cgroup v2 |
 | **Root Access** | Required for containers |
-| **Software** | GCC, Python 3.11+, Node.js 18+, ngrok |
+| **Software** | GCC, Python 3.11+, Node.js 18+, busybox-static, ngrok |
 
 ---
 
@@ -18,32 +18,46 @@
 git clone https://github.com/Siddhanthkjain2005/container.git
 cd container
 
-# 2. Build C runtime
+# 2. Install dependencies
+sudo apt-get update && sudo apt-get install -y gcc make busybox-static
+
+# 3. Build C runtime
 cd runtime && make && cd ..
 
-# 3. Setup the root filesystem (CRITICAL)
+# 4. Setup the root filesystem (CRITICAL)
 # This creates a minimal isolated environment for your containers
 sudo bash scripts/setup_rootfs.sh
 
-# 4. Setup Python backend
+# 5. Setup Python backend
 cd backend
 python3 -m venv venv
 # Note: Use sudo with the direct path to the venv python for container operations
 sudo ./venv/bin/python3 -m pip install -r requirements.txt
 cd ..
 
-# 5. Install dashboard dependencies
+# 6. Install dashboard dependencies
 cd dashboard && npm install && cd ..
 ```
 
 ---
 
-## 🖥️ Running the CLI
-
+## 🖥️ Running the Backend
 ```bash
-sudo python3 controller.py
+cd backend
+sudo PYTHONPATH=. ./venv/bin/python3 -m minicontainer.api
+```
 
----
+## 📊 Running the Dashboard
+```bash
+cd dashboard
+npm run dev
+```
+
+## ⌨️ Running the CLI
+```bash
+cd backend
+sudo PYTHONPATH=. ./venv/bin/python3 -m minicontainer.cli --help
+```
 
 ## ☁️ Vercel Deployment
 

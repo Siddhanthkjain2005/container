@@ -41,3 +41,6 @@ INFO:     127.0.0.1:42126 - "POST /api/containers/hey/exec HTTP/1.1" 200 OK
 INFO:     127.0.0.1:42130 - "GET /api/containers HTTP/1.1" 200 OK
 Exec command succeeded: echo '[Gradual Increase] Running for 60s'; intensi...
 INFO:     127.0.0.1:53284 - "POST /api/containers/stress-test/exec HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58668 - "POST /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57560 - "POST /api/containers/final-test/start HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57576 - "POST /api/containers/final-test/exec HTTP/1.1" 200 OK
