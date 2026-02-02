@@ -1587,6 +1587,7 @@ function App() {
         command = 'echo Hello'
     }
 
+    console.log(`Executing command on [${containerId}]: ${command}`)
     try {
       const res = await fetch(`${API_URL}/api/containers/${containerId}/exec`, {
         method: 'POST',
