@@ -6,6 +6,11 @@ import './App.css'
 const API_URL = import.meta.env.VITE_API_URL || window.location.origin
 const WS_URL = import.meta.env.VITE_WS_URL || `ws${window.location.protocol === 'https:' ? 's' : ''}://${window.location.host}/ws`
 
+console.log('--- MiniContainer Debug ---')
+console.log('API_URL:', API_URL)
+console.log('WS_URL:', WS_URL)
+console.log('---------------------------')
+
 // Icon Components
 const Icons = {
   Box: () => (
