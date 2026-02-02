@@ -24,17 +24,20 @@ A lightweight container management system built from scratch using Linux cgroups
 
 ```bash
 # 1. Build the C runtime
-cd runtime
-make all
-sudo make install  # Optional: install system-wide
+cd runtime && make && cd ..
 
-# 2. Install Python CLI
-cd ../backend
-pip install -e .
+# 2. Setup the root filesystem (Required for isolation)
+sudo bash scripts/setup_rootfs.sh
 
-# 3. Install dashboard dependencies
-cd ../dashboard
-npm install
+# 3. Setup Python backend
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cd ..
+
+# 4. Install dashboard dependencies
+cd dashboard && npm install && cd ..
 ```
 
 ### Usage

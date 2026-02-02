@@ -1,2 +1,9 @@
 venv/
 backend/venv/
+node_modules/
+dist/
+*.log
+runtime/build/
+.DS_Store
+__pycache__/
+*.pyc

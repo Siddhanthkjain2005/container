@@ -1,6 +1,8 @@
-"""MiniContainer - FastAPI Backend with Real Metrics Only"""
-
 import asyncio
+
+import secrets
+import threading
+import time
 import os
 import subprocess
 import json
@@ -138,34 +140,9 @@ async def metrics_broadcast_task():
         if ws_manager.active_connections:
             containers = get_running_containers()
             metrics_by_id = {}
-            
             for c in containers:
                 cid = c["id"]
                 current_time = time.time()
-                
-                # If container is stopped, still read cpu_usec from cgroup (it persists)
-                if c.get("state") != "running":
-                    cgroup = CGROUP_BASE / cid
-                    cpu_usec = 0
-                    # Read CPU time even for stopped containers
-                    if cgroup.exists():
-                        try:
-                            for line in (cgroup / "cpu.stat").read_text().splitlines():
-                                if line.startswith("usage_usec"):
-                                    cpu_usec = int(line.split()[1])
-                                    break
-                        except:
-                            pass
-                    metrics_by_id[cid] = {
-                        "cpu_percent": 0,
-                        "cpu_usec": cpu_usec,  # Include CPU time even when stopped
-                        "memory_bytes": 0,
-                        "memory_percent": 0,
-                        "memory_limit_bytes": 268435456,
-                        "pids": 0,
-                        "init_pid": 0
-                    }
-                    continue
                 
                 # Get real metrics from cgroup only
                 cgroup = CGROUP_BASE / cid
@@ -175,6 +152,14 @@ async def metrics_broadcast_task():
                 mem_limit = 268435456
                 throttle_count = 0
                 
+                # Check for cached CPU values
+                if cid not in prev_cpu:
+                    prev_cpu[cid] = 0
+                if cid not in prev_time:
+                    prev_time[cid] = current_time
+                if cid not in prev_throttle:
+                    prev_throttle[cid] = 0
+
                 if cgroup.exists():
                     try:
                         mem = int((cgroup / "memory.current").read_text().strip())
@@ -393,25 +378,20 @@ while true; do sleep 1; done
     state_dir = f"/var/lib/minicontainer/containers/{container_name}"
     subprocess.run(["sudo", "mkdir", "-p", state_dir], check=False)
     state = f"id={container_name}\\nname={container_name}\\nstate=created\\npid=0\\nrootfs={rootfs}"
-    subprocess.run(f"echo -e '{state}' | sudo tee {state_dir}/state.txt > /dev/null", shell=True)
+    subprocess.run(f"printf '{state}' | sudo tee {state_dir}/state.txt > /dev/null", shell=True)
     
     return ContainerResponse(id=container_name, name=container_name, state="created", pid=0)
 
 @app.post("/api/containers/{container_id}/start")
 def start_container(container_id: str):
-    """Start a container using C runtime for proper isolation"""
-    import threading
-    
-    # Find container state
-    state_dir = Path(f"/var/lib/minicontainer/containers/{container_id}")
-    state_file = state_dir / "state.txt"
-    
+    """Start a container using the C runtime"""
+    state_file = Path(f"/var/lib/minicontainer/containers/{container_id}/state.txt")
     if not state_file.exists():
-        raise HTTPException(status_code=404, detail="Container not found")
+        return {"error": "Container not found"}
     
-    # Read config from state
     rootfs = "/tmp/alpine-rootfs"
-    memory_limit = "256M"
+    memory_limit = "268435456" # 256MB in bytes
+    
     try:
         for line in state_file.read_text().splitlines():
             if line.startswith("rootfs="):
@@ -427,13 +407,15 @@ def start_container(container_id: str):
             # Use C runtime which has proper mount namespace + pivot_root
             # Run as background process with infinite loop to keep container alive
             cmd = [
-                "sudo", str(RUNTIME_PATH), "run", container_id,
+                "sudo", str(RUNTIME_PATH), "run",
+                "--name", container_id,
                 "--rootfs", rootfs,
                 "--memory", memory_limit,
-                "--cmd", "/bin/sh -c 'while true; do sleep 3600; done'"  # Keep container alive indefinitely
+                "--cmd", "/bin/sh -c 'exec tail -f /dev/null'"  # Keep container alive without forking
             ]
             # Start process in background without waiting
-            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+            with open("runtime.log", "a") as err:
+                subprocess.Popen(cmd, stdout=err, stderr=err, stdin=subprocess.DEVNULL)
         except Exception as e:
             print(f"Error starting container: {e}")
             pass
@@ -442,7 +424,7 @@ def start_container(container_id: str):
     thread.start()
     
     # Wait for process to start
-    time.sleep(0.5)
+    time.sleep(1.0)
     
     # Get PID
     pid = 0
@@ -456,7 +438,7 @@ def start_container(container_id: str):
     
     # Update state
     state = f"id={container_id}\\nname={container_id}\\nstate=running\\npid={pid}\\nrootfs={rootfs}"
-    subprocess.run(f"echo -e '{state}' | sudo tee {state_file} > /dev/null", shell=True)
+    subprocess.run(f"printf '{state}' | sudo tee {state_file} > /dev/null", shell=True)
     
     return {"status": "started", "pid": pid}
 
@@ -543,13 +525,6 @@ async def exec_in_container(container_id: str, request: Request):
     script_name = f"exec_{exec_id}.sh"
     script_path = f"{DEFAULT_ROOTFS}/tmp/{script_name}"
     
-    # Write script
-    script_content = f"#!/bin/sh\n{command}\n"
-    with open("/tmp/exec_temp.sh", "w") as f:
-        f.write(script_content)
-    subprocess.run(["sudo", "cp", "/tmp/exec_temp.sh", script_path], check=False)
-    subprocess.run(["sudo", "chmod", "755", script_path], check=False)
-    
     # Run the command ASYNCHRONOUSLY in background
     import threading
     def run_in_cgroup():
@@ -565,19 +540,30 @@ async def exec_in_container(container_id: str, request: Request):
             except:
                 pass
             
+            # Determine base command
             if target_pid:
-                # Use nsenter to join the container's namespaces and execute command
-                cmd = f"sudo nsenter --target {target_pid} --mount --uts --ipc --pid /bin/sh /tmp/{script_name}"
+                # Use nsenter to join the container's namespaces
+                # We also join the cgroup to ensure resource limits and metrics are applied
+                base_cmd = f"sudo bash -c 'echo $$ > {cgroup_path}/cgroup.procs && exec nsenter --target {target_pid} --mount --uts --ipc --pid /bin/sh'"
             else:
                 # Fallback: create new namespaces (container might not be running)
-                cmd = f"sudo unshare --mount --pid --uts --ipc --fork bash -c 'echo $$ > {cgroup_path}/cgroup.procs; mount --make-rprivate /; exec chroot {DEFAULT_ROOTFS} /bin/sh /tmp/{script_name}'"
+                # Note: This is an emergency fallback; creating nested namespaces this way is tricky
+                base_cmd = f"sudo unshare --mount --pid --uts --ipc --fork bash -c 'echo $$ > {cgroup_path}/cgroup.procs; mount --make-rprivate /; exec chroot {DEFAULT_ROOTFS} /bin/sh'"
             
-            # Execute command in background
-            subprocess.run(cmd, shell=True, timeout=300, capture_output=True, text=True)
-            subprocess.run(["sudo", "rm", "-f", script_path], check=False)
+            # Execute command by piping the string to the shell
+            res = subprocess.run(base_cmd, input=command, shell=True, timeout=300, capture_output=True, text=True)
+            
+            if res.returncode != 0:
+                # Filter out verbose noisy shell errors if command still "worked" (like fork bomb)
+                stderr = res.stderr.strip()
+                if "can't fork" in stderr or "Killed" in stderr:
+                    print(f"Exec command hit limits (code {res.returncode})")
+                else:
+                    print(f"Exec command failed (code {res.returncode}): {stderr}")
+            else:
+                print(f"Exec command succeeded: {command[:50]}...")
         except Exception as e:
-            print(f"Exec failed: {e}")
-            subprocess.run(["sudo", "rm", "-f", script_path], check=False)
+            print(f"Exec failed with exception: {e}")
     
     # Start in background thread
     thread = threading.Thread(target=run_in_cgroup, daemon=True)
@@ -777,3 +763,7 @@ def export_summary_csv():
             filename="minicontainer_summary.csv"
         )
     raise HTTPException(status_code=404, detail="No summary data available yet")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

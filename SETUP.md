@@ -21,14 +21,18 @@ cd container
 # 2. Build C runtime
 cd runtime && make && cd ..
 
-# 3. Setup Python backend
+# 3. Setup the root filesystem (CRITICAL)
+# This creates a minimal isolated environment for your containers
+sudo bash scripts/setup_rootfs.sh
+
+# 4. Setup Python backend
 cd backend
 python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# Note: Use sudo with the direct path to the venv python for container operations
+sudo ./venv/bin/python3 -m pip install -r requirements.txt
 cd ..
 
-# 4. Install dashboard dependencies
+# 5. Install dashboard dependencies
 cd dashboard && npm install && cd ..
 ```
 
@@ -64,13 +68,8 @@ ngrok http 8000
 
 Copy the ngrok URL (e.g., `https://abc123.ngrok-free.dev`)
 
-### Step 3: Update Frontend URL
-
-Edit `dashboard/src/App.jsx` (lines 4-5):
-```javascript
-const API_URL = 'https://YOUR-NGROK-URL.ngrok-free.dev'
-const WS_URL = 'wss://YOUR-NGROK-URL.ngrok-free.dev/ws'
-```
+### Step 3: Access the Dashboard
+Access the dashboard via your browser. The frontend automatically detects the API and WebSocket URLs.
 
 ### Step 4: Deploy to Vercel
 

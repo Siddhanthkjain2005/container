@@ -103,7 +103,10 @@ int main(int argc, char *argv[]) {
     optind = 2;
     while ((opt = getopt_long(argc, argv, "n:r:m:c:p:x:", opts, NULL)) != -1) {
         switch (opt) {
-            case 'n': strncpy(config.name, optarg, sizeof(config.name)-1); break;
+            case 'n': 
+                strncpy(config.name, optarg, sizeof(config.name)-1);
+                strncpy(config.id, optarg, sizeof(config.id)-1); 
+                break;
             case 'r': strncpy(config.rootfs, optarg, sizeof(config.rootfs)-1); break;
             case 'm': config.limits.memory_limit_bytes = atol(optarg); break;
             case 'c': config.limits.cpu_quota_us = atoi(optarg) * 1000; break;

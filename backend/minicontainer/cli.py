@@ -25,7 +25,7 @@ from rich import box
 console = Console()
 
 # Runtime path - Use absolute path
-RUNTIME_PATH = Path("/home/student/.gemini/antigravity/scratch/minicontainer/runtime/build/minicontainer-runtime")
+RUNTIME_PATH = Path("/home/student/container/runtime/build/minicontainer-runtime")
 CGROUP_BASE = Path("/sys/fs/cgroup/minicontainer")
 STATE_DIR = Path("/var/lib/minicontainer")
 LOG_DIR = STATE_DIR / "logs"

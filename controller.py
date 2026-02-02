@@ -47,7 +47,7 @@ except ImportError:
 console = Console()
 
 # Configuration
-RUNTIME_PATH = Path("/home/student/.gemini/antigravity/scratch/minicontainer/runtime/build/minicontainer-runtime")
+RUNTIME_PATH = Path("/home/student/container/runtime/build/minicontainer-runtime")
 CGROUP_BASE = Path("/sys/fs/cgroup/minicontainer")
 DEFAULT_ROOTFS = "/tmp/alpine-rootfs"
 STATE_DIR = Path("/var/lib/minicontainer")
