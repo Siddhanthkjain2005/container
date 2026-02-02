@@ -4,12 +4,15 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
 const API_URL = import.meta.env.VITE_API_URL || window.location.origin
-const WS_URL = import.meta.env.VITE_WS_URL || `ws${window.location.protocol === 'https:' ? 's' : ''}://${window.location.host}/ws`
+let WS_URL = import.meta.env.VITE_WS_URL
 
-console.log('--- MiniContainer Debug ---')
-console.log('API_URL:', API_URL)
-console.log('WS_URL:', WS_URL)
-console.log('---------------------------')
+if (!WS_URL) {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  WS_URL = `${protocol}//${window.location.host}/ws`
+} else if (window.location.protocol === 'https:' && WS_URL.startsWith('ws://')) {
+  // Automatically upgrade to wss if we are on https but user provided ws
+  WS_URL = WS_URL.replace('ws://', 'wss://')
+}
 
 // Icon Components
 const Icons = {
