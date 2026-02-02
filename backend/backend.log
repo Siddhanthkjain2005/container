@@ -44,3 +44,27 @@ INFO:     127.0.0.1:53284 - "POST /api/containers/stress-test/exec HTTP/1.1" 200
 INFO:     127.0.0.1:58668 - "POST /api/containers HTTP/1.1" 200 OK
 INFO:     127.0.0.1:57560 - "POST /api/containers/final-test/start HTTP/1.1" 200 OK
 INFO:     127.0.0.1:57576 - "POST /api/containers/final-test/exec HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     127.0.0.1:45246 - "WebSocket /ws" [accepted]
+INFO:     connection open
+Exec command succeeded: echo "TEST_OUTPUT" > /test.txt...
+INFO:     127.0.0.1:45238 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     127.0.0.1:45262 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:45274 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45282 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:45290 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:59048 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:59034 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59054 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59066 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:33668 - "POST /api/containers/final-test/stop HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33670 - "GET /api/containers HTTP/1.1" 200 OK
