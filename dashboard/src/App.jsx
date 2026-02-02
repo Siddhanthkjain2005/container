@@ -3,15 +3,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
-const API_URL = import.meta.env.VITE_API_URL || window.location.origin
+let API_URL = import.meta.env.VITE_API_URL || window.location.origin
 let WS_URL = import.meta.env.VITE_WS_URL
 
-if (!WS_URL) {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  WS_URL = `${protocol}//${window.location.host}/ws`
-} else if (window.location.protocol === 'https:' && WS_URL.startsWith('ws://')) {
-  // Automatically upgrade to wss if we are on https but user provided ws
-  WS_URL = WS_URL.replace('ws://', 'wss://')
+// Automatically upgrade to secure protocols if page is HTTPS
+if (window.location.protocol === 'https:') {
+  if (API_URL.startsWith('http://')) API_URL = API_URL.replace('http://', 'https://')
+
+  if (!WS_URL) {
+    WS_URL = `wss://${window.location.host}/ws`
+  } else if (WS_URL.startsWith('ws://')) {
+    WS_URL = WS_URL.replace('ws://', 'wss://')
+  }
+} else {
+  if (!WS_URL) WS_URL = `ws://${window.location.host}/ws`
 }
 
 // Icon Components
