@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
-const API_URL = window.location.origin
-const WS_URL = `ws${window.location.protocol === 'https:' ? 's' : ''}://${window.location.host}/ws`
+const API_URL = import.meta.env.VITE_API_URL || window.location.origin
+const WS_URL = import.meta.env.VITE_WS_URL || `ws${window.location.protocol === 'https:' ? 's' : ''}://${window.location.host}/ws`
 
 // Icon Components
 const Icons = {

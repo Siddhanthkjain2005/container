@@ -94,6 +94,9 @@ Access the dashboard via your browser. The frontend automatically detects the AP
    - **Root Directory**: `dashboard`
    - **Build Command**: `npm run build`
    - **Output Directory**: `dist`
+   - **Environment Variables**:
+     - `VITE_API_URL`: Your ngrok URL (e.g., `https://abc123.ngrok-free.dev`)
+     - `VITE_WS_URL`: Your ngrok WebSocket URL (e.g., `wss://abc123.ngrok-free.dev/ws`)
 5. Click **Deploy**
 
 Your dashboard will be live at: `https://your-project.vercel.app`
