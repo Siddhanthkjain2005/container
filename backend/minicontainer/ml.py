@@ -373,71 +373,153 @@ class EnhancedAnomalyDetector:
         return anomalies_detected
     
     def _calculate_health_score(self, stats: ContainerStats, cpu: float, mem: int, mem_limit: int, throttled: bool = False) -> float:
-        """Calculate comprehensive health score (0-100)"""
-        score = 100.0
+        """Calculate health score based on VOLATILITY and RATE OF CHANGE, not absolute values.
         
-        # CPU usage penalty - more sensitive thresholds
-        if cpu > 80:
-            score -= 25
-        elif cpu > 50:
-            score -= (cpu - 50) * 0.6
-        elif cpu > 20:
-            score -= (cpu - 20) * 0.3
+        Health drops when:
+        - CPU or memory usage is changing rapidly (high rate of change)
+        - System is volatile (high variance)
+        - Anomalies are detected
+        - Container is throttled
         
-        # Memory usage penalty - more sensitive thresholds
+        Health recovers when:
+        - Usage is stable (low rate of change, low variance)
+        """
+        # Start from current health score for smoothing, or 100 if first sample
+        base_score = getattr(stats, '_prev_health', 100.0)
+        
+        penalties = 0.0
+        recovery_bonus = 0.0
+        
+        # --- VOLATILITY PENALTIES (react to CHANGES, not absolute values) ---
+        
+        # CPU rate of change penalty: abs(cpu_rate) is the change per second
+        cpu_change = abs(stats.cpu_rate)
+        if cpu_change > 30:  # Very rapid change (>30% per second)
+            penalties += 25
+        elif cpu_change > 15:  # Significant change
+            penalties += 15
+        elif cpu_change > 5:  # Moderate change
+            penalties += 5
+        
+        # Memory rate of change penalty
+        mem_change_mb = abs(stats.mem_rate) / (1024 * 1024)  # MB per second
+        if mem_change_mb > 50:  # >50MB/s change
+            penalties += 25
+        elif mem_change_mb > 20:  # >20MB/s change
+            penalties += 15
+        elif mem_change_mb > 5:  # >5MB/s change
+            penalties += 5
+        
+        # CPU variance penalty (high variance = unhealthy)
+        cpu_std = math.sqrt(stats.cpu_ema_variance) if stats.cpu_ema_variance > 0 else 0
+        if cpu_std > 20:
+            penalties += 15
+        elif cpu_std > 10:
+            penalties += 8
+        
+        # --- CRITICAL STATE PENALTIES (absolute thresholds for danger zones) ---
+        
+        # Only penalize EXTREME absolute usage (resource exhaustion)
+        if cpu > 95:
+            penalties += 20
+        
         mem_percent = (mem / mem_limit * 100) if mem_limit > 0 else 0
-        if mem_percent > 80:
-            score -= 25
-        elif mem_percent > 50:
-            score -= (mem_percent - 50) * 0.6
-        elif mem_percent > 20:
-            score -= (mem_percent - 20) * 0.3
+        if mem_percent > 95:
+            penalties += 20
         
-        # Throttling penalty - indicates container is hitting resource limits
+        # Throttling penalty - container is hitting limits
         if throttled:
-            score -= 15
+            penalties += 15
         
-        # Recent anomalies penalty
+        # --- ANOMALY PENALTIES ---
         recent = [a for a in stats.anomalies if time.time() - a["timestamp"] < 120]
         high_severity = sum(1 for a in recent if a.get("severity") == "high")
         medium_severity = sum(1 for a in recent if a.get("severity") == "medium")
-        score -= high_severity * 10
-        score -= medium_severity * 5
+        penalties += high_severity * 10
+        penalties += medium_severity * 5
         
         # Stress penalty
         if stats.is_stressed:
-            score -= 15
+            penalties += 10
         
-        # Efficiency penalty - if efficiency is low
-        if stats.efficiency_score < 50:
-            score -= 10
-        elif stats.efficiency_score < 70:
-            score -= 5
+        # --- RECOVERY MECHANISM (when system is STABLE, health improves) ---
         
-        return max(0, min(100, score))
+        # If CPU and memory are both stable (low rate of change, low variance)
+        is_stable = cpu_change < 3 and mem_change_mb < 2 and cpu_std < 8
+        
+        if is_stable and not stats.is_stressed and not throttled and len(recent) == 0:
+            # System is healthy and stable - recover health
+            recovery_bonus = 5  # Recover 5 points per tick when stable
+        
+        # Calculate new score with smoothing
+        target_score = 100.0 - penalties + recovery_bonus
+        target_score = max(0, min(100, target_score))
+        
+        # Smooth the transition (exponential moving average for health)
+        # This prevents sudden jumps in health score
+        alpha = 0.3  # Smoothing factor
+        new_score = alpha * target_score + (1 - alpha) * base_score
+        
+        # Store for next iteration
+        stats._prev_health = new_score
+        
+        return max(0, min(100, new_score))
     
     def _calculate_stability_score(self, stats: ContainerStats) -> float:
-        """Calculate stability score based on variance"""
+        """Calculate stability score based on variance and consistency.
+        
+        Stability improves when usage patterns are consistent.
+        Stability drops when there's high variance or rapid changes.
+        """
         if stats.samples_collected < 10:
             return 100.0
         
-        score = 100.0
+        # Start from current stability score for smoothing
+        base_score = getattr(stats, '_prev_stability', 100.0)
         
-        # CPU stability
+        penalties = 0.0
+        recovery_bonus = 0.0
+        
+        # CPU stability - coefficient of variation
         cpu_cv = math.sqrt(stats.cpu_ema_variance) / max(stats.cpu_ema, 1)
-        if cpu_cv > 0.5:
-            score -= 30
-        elif cpu_cv > 0.3:
-            score -= 15
+        if cpu_cv > 0.5:  # Very volatile
+            penalties += 30
+        elif cpu_cv > 0.3:  # Moderately volatile
+            penalties += 15
+        elif cpu_cv > 0.15:  # Slightly volatile
+            penalties += 5
         
         # Memory stability
         mem_cv = math.sqrt(stats.mem_ema_variance) / max(stats.mem_ema, 1)
         if mem_cv > 0.5:
-            score -= 30
+            penalties += 30
         elif mem_cv > 0.3:
-            score -= 15
+            penalties += 15
+        elif mem_cv > 0.15:
+            penalties += 5
         
-        return max(0, min(100, score))
+        # Rate of change impact
+        if abs(stats.cpu_rate) > 20:
+            penalties += 10
+        if abs(stats.mem_rate) / (1024 * 1024) > 30:
+            penalties += 10
+        
+        # Recovery: if very stable (low CV and low rate of change)
+        if cpu_cv < 0.1 and mem_cv < 0.1 and abs(stats.cpu_rate) < 3:
+            recovery_bonus = 5
+        
+        # Calculate target score
+        target_score = 100.0 - penalties + recovery_bonus
+        target_score = max(0, min(100, target_score))
+        
+        # Smooth the transition
+        alpha = 0.25
+        new_score = alpha * target_score + (1 - alpha) * base_score
+        
+        # Store for next iteration
+        stats._prev_stability = new_score
+        
+        return max(0, min(100, new_score))
     
     def _calculate_efficiency_score(self, stats: ContainerStats, cpu: float, mem: int, mem_limit: int) -> float:
         """Calculate resource efficiency score (0-100)
@@ -446,36 +528,58 @@ class EnhancedAnomalyDetector:
         - Resource utilization (using some resources is good, but not too much)
         - Stability of usage patterns
         - Rate of resource consumption
+        
+        Efficiency improves when resources are used consistently without waste.
         """
         if stats.samples_collected < 5:
             return 100.0
         
-        score = 100.0
+        # Start from current efficiency score for smoothing
+        base_score = getattr(stats, '_prev_efficiency', 100.0)
         
-        # Optimal CPU usage is around 20-60%, penalize extremes
-        if cpu < 1:  # Idle container
-            score -= 10
-        elif cpu > 80:  # Overloaded
-            score -= (cpu - 80) * 1.5
+        penalties = 0.0
+        recovery_bonus = 0.0
+        
+        # Optimal CPU usage is around 10-70%, penalize extremes
+        if cpu < 1:  # Idle container (wasted resources)
+            penalties += 10
+        elif cpu > 90:  # Overloaded (inefficient)
+            penalties += (cpu - 90) * 2
+        elif cpu > 80:
+            penalties += (cpu - 80) * 1
         
         # Memory efficiency
         mem_percent = (mem / mem_limit * 100) if mem_limit > 0 else 0
-        if mem_percent < 5:  # Barely using memory
-            score -= 5
-        elif mem_percent > 85:  # Memory pressure
-            score -= (mem_percent - 85) * 2
+        if mem_percent < 5:  # Barely using memory (over-provisioned)
+            penalties += 5
+        elif mem_percent > 90:  # Memory pressure (under-provisioned)
+            penalties += (mem_percent - 90) * 2
         
-        # Penalize high volatility (rapid changes)
-        if abs(stats.cpu_rate) > 20:  # More than 20% change per second
-            score -= 15
+        # Penalize high volatility (rapid changes indicate inefficiency)
+        if abs(stats.cpu_rate) > 20:
+            penalties += 15
+        elif abs(stats.cpu_rate) > 10:
+            penalties += 5
         
         # Reward consistent usage patterns
-        if stats.samples_collected > 30:
-            cpu_std = math.sqrt(stats.cpu_ema_variance)
-            if cpu_std < 5:  # Very stable
-                score += 5
+        cpu_std = math.sqrt(stats.cpu_ema_variance) if stats.cpu_ema_variance > 0 else 0
+        if cpu_std < 5:  # Very stable = efficient
+            recovery_bonus += 8
+        elif cpu_std < 10:
+            recovery_bonus += 3
         
-        return max(0, min(100, score))
+        # Calculate target score
+        target_score = 100.0 - penalties + recovery_bonus
+        target_score = max(0, min(100, target_score))
+        
+        # Smooth the transition
+        alpha = 0.25
+        new_score = alpha * target_score + (1 - alpha) * base_score
+        
+        # Store for next iteration
+        stats._prev_efficiency = new_score
+        
+        return max(0, min(100, new_score))
     
     def _cleanup_old_anomalies(self, stats: ContainerStats):
         """Keep only recent anomalies"""
