@@ -395,69 +395,82 @@ class EnhancedAnomalyDetector:
         # CPU rate of change penalty: abs(cpu_rate) is the change per second
         cpu_change = abs(stats.cpu_rate)
         if cpu_change > 30:  # Very rapid change (>30% per second)
-            penalties += 25
+            penalties += 20
         elif cpu_change > 15:  # Significant change
-            penalties += 15
-        elif cpu_change > 5:  # Moderate change
-            penalties += 5
+            penalties += 10
+        elif cpu_change > 8:  # Moderate change
+            penalties += 3
         
         # Memory rate of change penalty
         mem_change_mb = abs(stats.mem_rate) / (1024 * 1024)  # MB per second
         if mem_change_mb > 50:  # >50MB/s change
-            penalties += 25
+            penalties += 20
         elif mem_change_mb > 20:  # >20MB/s change
-            penalties += 15
-        elif mem_change_mb > 5:  # >5MB/s change
-            penalties += 5
+            penalties += 10
+        elif mem_change_mb > 10:  # >10MB/s change
+            penalties += 3
         
         # CPU variance penalty (high variance = unhealthy)
         cpu_std = math.sqrt(stats.cpu_ema_variance) if stats.cpu_ema_variance > 0 else 0
-        if cpu_std > 20:
+        if cpu_std > 25:
             penalties += 15
-        elif cpu_std > 10:
+        elif cpu_std > 15:
             penalties += 8
+        elif cpu_std > 10:
+            penalties += 3
         
         # --- CRITICAL STATE PENALTIES (absolute thresholds for danger zones) ---
         
         # Only penalize EXTREME absolute usage (resource exhaustion)
         if cpu > 95:
-            penalties += 20
+            penalties += 15
         
         mem_percent = (mem / mem_limit * 100) if mem_limit > 0 else 0
         if mem_percent > 95:
-            penalties += 20
+            penalties += 15
         
         # Throttling penalty - container is hitting limits
         if throttled:
-            penalties += 15
-        
-        # --- ANOMALY PENALTIES ---
-        recent = [a for a in stats.anomalies if time.time() - a["timestamp"] < 120]
-        high_severity = sum(1 for a in recent if a.get("severity") == "high")
-        medium_severity = sum(1 for a in recent if a.get("severity") == "medium")
-        penalties += high_severity * 10
-        penalties += medium_severity * 5
-        
-        # Stress penalty
-        if stats.is_stressed:
             penalties += 10
         
-        # --- RECOVERY MECHANISM (when system is STABLE, health improves) ---
+        # --- ANOMALY PENALTIES (shorter window: 30 seconds) ---
+        recent = [a for a in stats.anomalies if time.time() - a["timestamp"] < 30]
+        high_severity = sum(1 for a in recent if a.get("severity") == "high")
+        medium_severity = sum(1 for a in recent if a.get("severity") == "medium")
+        penalties += high_severity * 8
+        penalties += medium_severity * 3
         
-        # If CPU and memory are both stable (low rate of change, low variance)
-        is_stable = cpu_change < 3 and mem_change_mb < 2 and cpu_std < 8
+        # Stress penalty (reduced)
+        if stats.is_stressed:
+            penalties += 5
         
-        if is_stable and not stats.is_stressed and not throttled and len(recent) == 0:
-            # System is healthy and stable - recover health
-            recovery_bonus = 5  # Recover 5 points per tick when stable
+        # --- RECOVERY MECHANISM (more aggressive) ---
+        
+        # Partial recovery even with some activity - just needs to be relatively stable
+        is_mostly_stable = cpu_change < 8 and mem_change_mb < 10
+        
+        if is_mostly_stable:
+            if not stats.is_stressed and not throttled and len(recent) == 0:
+                # Fully stable - aggressive recovery
+                recovery_bonus = 15
+            elif len(recent) <= 1:
+                # Mostly stable - moderate recovery
+                recovery_bonus = 8
+            else:
+                # Some instability but not changing rapidly - gentle recovery
+                recovery_bonus = 3
         
         # Calculate new score with smoothing
         target_score = 100.0 - penalties + recovery_bonus
         target_score = max(0, min(100, target_score))
         
-        # Smooth the transition (exponential moving average for health)
-        # This prevents sudden jumps in health score
-        alpha = 0.3  # Smoothing factor
+        # Smooth the transition (EMA for gradual changes)
+        # Use faster alpha when recovering (0.4) vs when dropping (0.25)
+        if target_score > base_score:
+            alpha = 0.4  # Recover faster
+        else:
+            alpha = 0.25  # Drop slower
+        
         new_score = alpha * target_score + (1 - alpha) * base_score
         
         # Store for next iteration
