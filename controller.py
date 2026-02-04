@@ -653,73 +653,34 @@ def exec_cmd():
     duration = 120
     
     if cmd_choice == "1":
-        # Variable CPU Load - alternating high/low patterns
+        # Variable CPU Load - same as website
         duration = IntPrompt.ask("[bright_magenta]Duration (seconds)[/]", default=120)
-        cmd = f"""
-echo '[Variable CPU] Starting alternating load pattern for {duration}s...'
-END=$(($(date +%s) + {duration}))
-while [ $(date +%s) -lt $END ]; do
-    # High load phase (2 seconds)
-    i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done
-    # Low load phase (1 second)
-    sleep 1
-done
-echo 'Variable CPU complete'
-"""
+        cmd = f"echo '[Variable CPU] Starting alternating load pattern for {duration}s'; END=$(($(date +%s) + {duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 1; done; echo '[Complete]'"
         console.print(f"\n[bold bright_yellow]⚡ Running Variable CPU Load for ~{duration} seconds...[/]")
         
     elif cmd_choice == "2":
-        # Memory Allocation
+        # Memory Allocation - same as website (uses /tmp instead of /dev/shm)
         size_mb = IntPrompt.ask("[bright_magenta]Memory to allocate (MB)[/]", default=100)
         duration = IntPrompt.ask("[bright_magenta]Duration (seconds)[/]", default=120)
-        cmd = f"dd if=/dev/zero of=/dev/shm/memtest bs=1M count={size_mb} 2>/dev/null && echo '[Memory] Allocated {size_mb}MB' && sleep {duration} && rm -f /dev/shm/memtest && echo 'Memory released'"
+        cmd = f"echo '[Memory Test] Allocating {size_mb}MB'; dd if=/dev/zero of=/tmp/memtest bs=1M count={size_mb} 2>&1 | head -1; echo '[Holding memory for {duration}s]'; sleep {duration}; rm -f /tmp/memtest; echo '[Memory Released]'"
         console.print(f"\n[bold bright_cyan]💾 Allocating {size_mb}MB for {duration} seconds...[/]")
         
     elif cmd_choice == "3":
-        # CPU Spike Pattern - bursts and idle
+        # CPU Spike Pattern - same as website
         duration = IntPrompt.ask("[bright_magenta]Duration (seconds)[/]", default=60)
-        cmd = f"""
-echo '[Spike Demo] CPU spike pattern for {duration}s - best for anomaly detection'
-END=$(($(date +%s) + {duration}))
-while [ $(date +%s) -lt $END ]; do
-    # Intense burst (1 second)
-    i=0; while [ $i -lt 600000 ]; do i=$((i+1)); done
-    # Idle period (2 seconds)
-    sleep 2
-done
-echo 'Spike pattern complete'
-"""
+        cmd = f"echo '[Spike Demo] Running for {duration}s'; END=$(($(date +%s) + {duration})); while [ $(date +%s) -lt $END ]; do echo 'SPIKE!'; i=0; while [ $i -lt 1500000 ]; do i=$((i+1)); done; echo 'idle'; sleep 2; done; echo '[Complete]'"
         console.print(f"\n[bold bright_magenta]🔥 Running CPU Spike Pattern for {duration}s...[/]")
         
     elif cmd_choice == "4":
-        # Gradual Increase
+        # Gradual Increase - same as website
         duration = IntPrompt.ask("[bright_magenta]Duration (seconds)[/]", default=60)
-        cmd = f"""
-echo '[Gradual] Starting gradual increase over {duration}s...'
-steps=10
-step_duration=$(({duration} / steps))
-for step in $(seq 1 $steps); do
-    intensity=$((step * 100000))
-    echo "Step $step/$steps - intensity $intensity"
-    i=0; while [ $i -lt $intensity ]; do i=$((i+1)); done
-    sleep $step_duration
-done
-echo 'Gradual increase complete'
-"""
+        cmd = f"echo '[Gradual Increase] Running for {duration}s'; intensity=100000; END=$(($(date +%s) + {duration})); while [ $(date +%s) -lt $END ]; do echo \"Load: $intensity\"; i=0; while [ $i -lt $intensity ]; do i=$((i+1)); done; intensity=$((intensity + 50000)); sleep 0.5; done; echo '[Complete]'"
         console.print(f"\n[bold bright_green]📈 Running Gradual Increase for ~{duration}s...[/]")
         
     elif cmd_choice == "5":
-        # Normal Workload - stable baseline
+        # Normal Workload - same as website
         duration = IntPrompt.ask("[bright_magenta]Duration (seconds)[/]", default=120)
-        cmd = f"""
-echo '[Normal] Stable workload for {duration}s - baseline for health scores'
-END=$(($(date +%s) + {duration}))
-while [ $(date +%s) -lt $END ]; do
-    i=0; while [ $i -lt 200000 ]; do i=$((i+1)); done
-    sleep 0.5
-done
-echo 'Normal workload complete'
-"""
+        cmd = f"echo '[Normal Workload] Running for {duration}s'; END=$(($(date +%s) + {duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 300000 ]; do i=$((i+1)); done; sleep 0.2; done; echo '[Complete]'"
         console.print(f"\n[bold bright_blue]⏱️ Running Normal Workload for {duration}s...[/]")
         
     else:
