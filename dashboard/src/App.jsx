@@ -2181,20 +2181,11 @@ function App() {
                 <a
                   className="btn btn-secondary btn-icon-text"
                   href={`${API_URL}/api/export/csv`}
-                  download="minicontainer_metrics.csv"
+                  download="container_metrics.csv"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <Icons.Download /> Metrics CSV
-                </a>
-                <a
-                  className="btn btn-secondary btn-icon-text"
-                  href={`${API_URL}/api/export/anomalies`}
-                  download="minicontainer_anomalies.csv"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Icons.Download /> Anomalies CSV
+                  <Icons.Download /> Export Metrics
                 </a>
               </div>
             </div>
