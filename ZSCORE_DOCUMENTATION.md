@@ -1,284 +1,128 @@
-# Z-Score Analytics - Technical Documentation
+# How Container Scores Work
 
-## Overview
+## Simple Explanation
 
-This system uses **Z-Score based statistical analysis** to monitor container health and detect anomalies. It does NOT use a pre-trained machine learning model (no `.pkl` file) - instead, it learns each container's baseline behavior in real-time and detects deviations using statistical methods.
+Your container dashboard shows 3 scores (0-100) for each container:
 
----
-
-## What is Z-Score?
-
-**Z-Score** (also called Standard Score) measures how many standard deviations a data point is from the mean. It's a fundamental statistical concept used to identify outliers.
-
-### The Formula
-
-```
-Z = (X - μ) / σ
-
-Where:
-  X = Current value (e.g., current CPU percentage)
-  μ = Mean (average) of historical values  
-  σ = Standard deviation of historical values
-```
-
-### Visual Explanation
-
-```
-Normal Distribution:
-                    μ (mean)
-                       │
-      ┌────────────────┼────────────────┐
-      │                │                │
-   -3σ    -2σ    -1σ   0   +1σ    +2σ   +3σ
-      │    │      │    │    │      │    │
-      └────┴──────┴────┴────┴──────┴────┘
-           │      │         │      │
-         Very   Unusual   Unusual  Very
-         Rare                      Rare
-```
-
-### Interpretation
-
-| Z-Score | Meaning | Probability |
-|---------|---------|-------------|
-| Z = 0 | Exactly at the average | 50% |
-| |Z| < 1 | Within normal range | 68% of data |
-| |Z| < 2 | Somewhat unusual | 95% of data |
-| |Z| > 2 | Unusual (potential anomaly) | Only 5% of data |
-| |Z| > 2.5 | Very unusual | Only 1.2% of data |
-| |Z| > 3 | Extreme outlier | Only 0.3% of data |
+| Score | What It Measures | Simple Rule |
+|-------|------------------|-------------|
+| **Health** | Is the container stable right now? | Drops when things change fast |
+| **Stability** | How consistent is the container? | Drops when usage varies a lot |
+| **Efficiency** | Is it using resources well? | Drops when idle OR overloaded |
 
 ---
 
-## How It Works in MiniContainer
+## The Z-Score (How We Detect Problems)
 
-### Step 1: Data Collection
+**Z-Score** answers: "Is this value normal or unusual?"
 
-Every second, the system collects metrics from each container:
-- **CPU Usage** (percentage)
-- **Memory Usage** (bytes)
-- **Process Count** (PIDs)
+```
+Z = (Current Value - Average) / Spread
 
-### Step 2: Baseline Learning (EMA)
-
-Instead of storing all historical values, we use **Exponential Moving Average (EMA)** for efficient memory usage:
-
-```python
-# EMA Formula (α = 0.3 in our system)
-new_average = α × current_value + (1 - α) × old_average
-
-# For variance (used to calculate standard deviation)
-new_variance = α × (value - average)² + (1 - α) × old_variance
+Example:
+- Your container normally uses 30% CPU
+- Right now it's using 60% CPU
+- That's WAY above normal → High Z-Score → PROBLEM DETECTED
 ```
 
-**Why EMA?**
-- Gives more weight to recent values
-- Uses constant memory (just 2 numbers per metric)
-- Adapts to changing container behavior
+| Z-Score | Meaning |
+|---------|---------|
+| 0 | Perfectly normal |
+| 1 | Slightly unusual |
+| 2 | Very unusual |
+| 3+ | Something is wrong! |
 
-### Step 3: Anomaly Detection
-
-When a new metric arrives:
-
-```python
-# Calculate standard deviation from variance
-std = sqrt(variance)
-
-# Calculate Z-score
-z_score = (current_value - average) / std
-
-# Check if it exceeds threshold (default: 1.5)
-if abs(z_score) > 1.5:
-    # ANOMALY DETECTED!
-    if z_score > 0:
-        # Value is HIGHER than normal (spike)
-    else:
-        # Value is LOWER than normal (drop)
-```
-
-### Step 4: Severity Classification
-
-| Z-Score Range | Severity |
-|---------------|----------|
-| 1.5 < |Z| ≤ 1.8 | Low |
-| 1.8 < |Z| ≤ 2.25 | Medium |
-| |Z| > 2.25 | High |
+**Threshold**: We alert when Z > 1.5 (moderately unusual)
 
 ---
 
-## Container Scores
+## Health Score (0-100)
 
-### 1. Health Score (0-100)
+**Think of it like a traffic light:**
+- 🟢 80-100 = Everything is fine
+- 🟡 50-79 = Something is changing
+- 🔴 0-49 = Major issues
 
-**Purpose**: Overall container health based on stability and current state.
+**What makes Health DROP:**
+- CPU or Memory changing rapidly
+- Container is stressed (high CPU)
+- Anomalies detected
 
-**Calculation**:
+**What makes Health GO UP:**
+- Everything stays stable
+- No rapid changes
+- No anomalies
+
+---
+
+## Stability Score (0-100)
+
+**Measures**: How consistent is the resource usage?
+
 ```
-Health = 100 - penalties + recovery_bonus
-
-Penalties Applied For:
-- Rapid CPU changes (>15%/sec): -10 to -20
-- Rapid memory changes (>20MB/sec): -10 to -20  
-- High variance (std > 15): -8 to -15
-- CPU > 95%: -15
-- Memory > 95%: -15
-- Recent anomalies: -3 to -8 per anomaly
-
-Recovery Bonus (when stable):
-- Fully stable conditions: +15
-- Mostly stable: +8
-- Somewhat stable: +3
+Stable Container:     CPU: 30%, 31%, 29%, 30%, 32%  → High Stability
+Unstable Container:   CPU: 10%, 80%, 20%, 90%, 5%   → Low Stability
 ```
 
-**Smoothing**: EMA prevents sudden jumps:
-```python
-new_health = 0.3 × target + 0.7 × previous_health
+**Simple formula**: We divide the variation by the average
+- Low ratio = Stable (high score)
+- High ratio = Unstable (low score)
+
+---
+
+## Efficiency Score (0-100)
+
+**The "Goldilocks" rule:**
+- ❌ Too little usage (< 10%) = Wasted resources
+- ✅ Just right (10-70%) = Efficient
+- ❌ Too much usage (> 90%) = Overloaded
+
+---
+
+## Quick Summary
+
+| Score | High (Good) | Low (Bad) |
+|-------|-------------|-----------|
+| Health | Container is calm | Container is stressed |
+| Stability | Usage is consistent | Usage is all over the place |
+| Efficiency | Resources used well | Resources wasted or maxed out |
+
+---
+
+## Example
+
+```
+Container: web-server
+  CPU: 45% (stable)
+  Memory: 60% (stable)
+  No anomalies
+
+Scores:
+  Health: 95 ✅ (no problems)
+  Stability: 90 ✅ (consistent usage)
+  Efficiency: 85 ✅ (good utilization)
+```
+
+```
+Container: cpu-stress
+  CPU: jumping 10% → 90% → 20% → 80%
+  Memory: 95% (almost full!)
+  3 anomalies detected
+
+Scores:
+  Health: 45 ⚠️ (rapid changes)
+  Stability: 30 ⚠️ (very inconsistent)
+  Efficiency: 40 ⚠️ (memory almost full)
 ```
 
 ---
 
-### 2. Stability Score (0-100)
+## That's It!
 
-**Purpose**: Measures consistency of resource usage.
+The system automatically:
+1. Watches your containers every second
+2. Learns what's "normal" for each container
+3. Detects when something unusual happens
+4. Updates the 3 scores in real-time
 
-**Key Metric**: Coefficient of Variation (CV)
-```
-CV = Standard Deviation / Mean
-```
-
-**Interpretation**:
-| CV Value | Meaning | Penalty |
-|----------|---------|---------|
-| CV < 0.1 | Very stable | +5 bonus |
-| 0.1 ≤ CV < 0.15 | Stable | 0 |
-| 0.15 ≤ CV < 0.3 | Slightly volatile | -5 |
-| 0.3 ≤ CV < 0.5 | Moderately volatile | -15 |
-| CV ≥ 0.5 | Very volatile | -30 |
-
----
-
-### 3. Efficiency Score (0-100)
-
-**Purpose**: How well are resources being utilized?
-
-**Optimal Range**: 10-70% utilization
-
-| Condition | Impact |
-|-----------|--------|
-| CPU < 1% | -10 (resource waste) |
-| CPU 10-70% | No penalty (optimal) |
-| CPU > 80% | -(cpu - 80) × 1 |
-| CPU > 90% | -(cpu - 90) × 2 |
-| Memory < 5% | -5 (over-provisioned) |
-| Memory > 90% | -(mem% - 90) × 2 |
-| Low volatility | +3 to +8 bonus |
-
----
-
-## Example Walkthrough
-
-### Scenario: CPU Spike Detection
-
-```
-Container "web-server" baseline:
-  - Average CPU: 25%
-  - Standard Deviation: 8%
-
-Current reading: 55% CPU
-
-Step 1: Calculate Z-score
-  Z = (55 - 25) / 8 = 3.75
-
-Step 2: Check threshold
-  |3.75| > 1.5 ✓ → ANOMALY
-
-Step 3: Classify severity
-  |3.75| > 2.25 → HIGH SEVERITY
-
-Step 4: Log anomaly
-  {
-    "type": "cpu_spike",
-    "value": 55,
-    "expected": 25,
-    "z_score": 3.75,
-    "severity": "high",
-    "message": "CPU spike: 55% (expected 25%)"
-  }
-```
-
----
-
-## Why Z-Score Instead of ML?
-
-| Aspect | Z-Score Approach | Traditional ML |
-|--------|------------------|----------------|
-| Training Data | Not needed | Requires historical data |
-| Setup Time | Instant | Hours/days to train |
-| Memory Usage | Minimal (few numbers) | Large model file |
-| Interpretability | Easy to explain | Black box |
-| Adaptation | Real-time | Needs retraining |
-| False Positives | Tunable threshold | Model-dependent |
-
----
-
-## Configuration
-
-The Z-score detector is configured in `backend/minicontainer/ml.py`:
-
-```python
-detector = EnhancedAnomalyDetector(
-    base_z_threshold=1.5,      # Z-score threshold for anomaly
-    ema_alpha=0.3,             # EMA smoothing (0-1, higher = more reactive)
-    min_samples=5,             # Samples before detection starts
-    stress_threshold_cpu=30.0  # CPU % to consider stressed
-)
-```
-
----
-
-## Data Flow
-
-```
-Container Metrics (every 1 sec)
-        │
-        ▼
-┌──────────────────────┐
-│  Update EMA Average  │ ← μ (mean)
-│  Update EMA Variance │ ← σ² (variance)
-└──────────────────────┘
-        │
-        ▼
-┌──────────────────────┐
-│  Calculate Z-Score   │ ← Z = (X - μ) / σ
-└──────────────────────┘
-        │
-        ▼
-┌──────────────────────┐
-│  Check Threshold     │ ← |Z| > 1.5 ?
-└──────────────────────┘
-        │
-    ┌───┴───┐
-    │       │
- Normal  Anomaly → Log + Update Scores
-    │       │
-    ▼       ▼
-┌──────────────────────┐
-│  Calculate Scores    │
-│  - Health            │
-│  - Stability         │
-│  - Efficiency        │
-└──────────────────────┘
-        │
-        ▼
-   WebSocket → Dashboard
-```
-
----
-
-## Summary
-
-- **No pre-trained model** - learns baselines in real-time
-- **Z-Score based** - simple, interpretable statistical method
-- **Adaptive thresholds** - adjusts based on container volatility
-- **Three scores** - Health, Stability, Efficiency (0-100)
-- **EMA smoothing** - prevents noisy fluctuations
+No configuration needed - it just works!
