@@ -756,66 +756,46 @@ echo 'Normal workload complete'
         console.print(f"[red]Failed to write script to rootfs: {e}[/]")
         return
     
-    # Run the C runtime with the command
+    # Use the SAME logic as the website API
     console.print(f"[dim]Executing isolated command...[/]\n")
     
-    if target.state == "running":
-        # JOIN EXISTING RUNNING CONTAINER
-        # Use nsenter to enter the container's namespaces and run the command
-        cgroup_path = CGROUP_BASE / target.id
-        procs_file = cgroup_path / "cgroup.procs"
-        target_pid = None
-        if procs_file.exists():
+    cgroup_path = CGROUP_BASE / target.id
+    rootfs_path = target.rootfs if target.rootfs else DEFAULT_ROOTFS
+    
+    # Check if container has running processes
+    procs_file = cgroup_path / "cgroup.procs"
+    target_pid = None
+    if procs_file.exists():
+        try:
             procs = procs_file.read_text().strip().split('\n')
             if procs and procs[0]:
                 target_pid = procs[0]
-        
-        if target_pid:
-            # Use nsenter to join the running container
-            nsenter_cmd = f"sudo nsenter --target {target_pid} --mount --uts --ipc --pid /bin/sh {script_path_in_rootfs}"
-            isolation_msg = f"Joining running container '{target.name}'"
-            
-            try:
-                with Progress(
-                    SpinnerColumn(style="bright_green"),
-                    TextColumn(f"[bold]{isolation_msg}...[/]"),
-                    console=console
-                ) as progress:
-                    task = progress.add_task("exec", total=None)
-                    result = subprocess.run(nsenter_cmd, shell=True, capture_output=True, text=True, timeout=max(duration + 120, 600))
-                    code, stdout, stderr = result.returncode, result.stdout, result.stderr
-            except subprocess.TimeoutExpired:
-                code, stdout, stderr = -1, "", "Command timed out"
-            except Exception as e:
-                code, stdout, stderr = -1, "", str(e)
-        else:
-            console.print(f"[red]Container '{target.name}' has no running processes[/]")
-            return
+        except:
+            pass
+    
+    if target_pid:
+        # Use nsenter to join the running container's namespaces
+        # Also add our process to the cgroup for resource tracking
+        exec_cmd = f"sudo bash -c 'echo $$ > {cgroup_path}/cgroup.procs && exec nsenter --target {target_pid} --mount --uts --ipc --pid /bin/sh {script_path_in_rootfs}'"
+        isolation_msg = f"Joining running container '{target.name}'"
     else:
-        # START THE EXISTING CONTAINER (it's created or stopped)
-        mem_limit = str(int(target.memory_limit_mb * 1024 * 1024)) if target.memory_limit_mb > 0 else "268435456"
-        cpu_quota = str(target.cpu_limit // 1000) if isinstance(target.cpu_limit, int) else "100"
-        pids_limit = str(target.pids_max) if target.pids_max > 0 else "100"
-        rootfs_path = target.rootfs if target.rootfs else DEFAULT_ROOTFS
-        
-        args = ["-r", rootfs_path,
-                "-m", mem_limit,
-                "-c", cpu_quota,
-                "-p", pids_limit,
-                "run", "--name", target.id,
-                "--", "/bin/sh", script_path_in_rootfs]
+        # Container not running - use unshare + chroot (same as website fallback)
+        exec_cmd = f"sudo unshare --mount --pid --uts --ipc --fork bash -c 'echo $$ > {cgroup_path}/cgroup.procs; mount --make-rprivate /; exec chroot {rootfs_path} /bin/sh {script_path_in_rootfs}'"
         isolation_msg = f"Starting container '{target.name}'"
-        
-        try:
-            with Progress(
-                SpinnerColumn(style="bright_green"),
-                TextColumn(f"[bold]{isolation_msg}...[/]"),
-                console=console
-            ) as progress:
-                task = progress.add_task("exec", total=None)
-                code, stdout, stderr = run_runtime(args, timeout=max(duration + 120, 600))
-        except Exception as e:
-            code, stdout, stderr = -1, "", str(e)
+    
+    try:
+        with Progress(
+            SpinnerColumn(style="bright_green"),
+            TextColumn(f"[bold]{isolation_msg}...[/]"),
+            console=console
+        ) as progress:
+            task = progress.add_task("exec", total=None)
+            result = subprocess.run(exec_cmd, shell=True, capture_output=True, text=True, timeout=max(duration + 120, 600))
+            code, stdout, stderr = result.returncode, result.stdout, result.stderr
+    except subprocess.TimeoutExpired:
+        code, stdout, stderr = -1, "", "Command timed out"
+    except Exception as e:
+        code, stdout, stderr = -1, "", str(e)
     
     # Display output (common for both cases)
     console.print("─" * 60)
