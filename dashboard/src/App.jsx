@@ -1578,8 +1578,8 @@ function App() {
         command = `echo '[Variable CPU] Starting alternating load pattern for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 1; done; echo '[Complete]'`
         break
       case '2':
-        // Memory Stress - uses /dev/shm (RAM-backed tmpfs) so cgroups track it
-        command = `echo '[Memory Stress] Allocating ${memorySize}MB to RAM'; mkdir -p /dev/shm/memtest; i=0; while [ $i -lt ${memorySize} ]; do dd if=/dev/urandom of=/dev/shm/memtest/block$i bs=1M count=1 2>/dev/null; i=$((i+1)); echo "Allocated $i MB"; done; echo '[Holding ${memorySize}MB for ${duration}s]'; sleep ${duration}; rm -rf /dev/shm/memtest; echo '[Memory Released]'`
+        // Memory Stress - mount tmpfs on /dev/shm first so cgroups track memory
+        command = `echo '[Memory Stress] Mounting tmpfs and allocating ${memorySize}MB'; mount -t tmpfs -o size=100M tmpfs /dev/shm 2>/dev/null; i=0; while [ $i -lt ${memorySize} ]; do dd if=/dev/zero of=/dev/shm/block$i bs=1M count=1 2>/dev/null; i=$((i+1)); echo "Allocated $i MB"; done; echo '[Holding ${memorySize}MB for ${duration}s]'; sleep ${duration}; rm -rf /dev/shm/*; echo '[Memory Released]'`
         break
       case '3':
         // CPU Spike Pattern - SAME AS controller.py

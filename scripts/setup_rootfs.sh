@@ -35,10 +35,16 @@ fi
 if [ "$(id -u)" -eq 0 ]; then
     mknod -m 666 "$ROOTFS/dev/null" c 1 3 2>/dev/null || touch "$ROOTFS/dev/null"
     mknod -m 666 "$ROOTFS/dev/zero" c 1 5 2>/dev/null || touch "$ROOTFS/dev/zero"
+    mknod -m 444 "$ROOTFS/dev/urandom" c 1 9 2>/dev/null || touch "$ROOTFS/dev/urandom"
 else
-    touch "$ROOTFS/dev/null" "$ROOTFS/dev/zero"
+    touch "$ROOTFS/dev/null" "$ROOTFS/dev/zero" "$ROOTFS/dev/urandom"
 fi
 chmod 666 "$ROOTFS/dev/null" "$ROOTFS/dev/zero"
+chmod 444 "$ROOTFS/dev/urandom"
+
+# Create /dev/shm for RAM-backed tmpfs (used by memory stress tests)
+mkdir -p "$ROOTFS/dev/shm"
+chmod 1777 "$ROOTFS/dev/shm"
 
 echo "Rootfs setup complete at $ROOTFS"
 ls -F "$ROOTFS/bin"

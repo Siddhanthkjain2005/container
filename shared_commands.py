@@ -18,9 +18,9 @@ def get_workload_commands():
             "icon": "💾",
             "desc": "Allocate real RAM - shows memory usage",
             "color": "cyan",
-            # Use /dev/shm (RAM-backed tmpfs) to actually hold memory in RAM
-            # This ensures cgroup memory.current tracks the allocation
-            "template": lambda duration, size_mb=50: f"echo '[Memory Stress] Allocating {size_mb}MB to RAM'; mkdir -p /dev/shm/memtest; i=0; while [ $i -lt {size_mb} ]; do dd if=/dev/urandom of=/dev/shm/memtest/block$i bs=1M count=1 2>/dev/null; i=$((i+1)); echo \"Allocated $i MB\"; done; echo '[Holding {size_mb}MB for {duration}s]'; sleep {duration}; rm -rf /dev/shm/memtest; echo '[Memory Released]'"
+            # Mount tmpfs on /dev/shm first, then allocate memory files
+            # This ensures cgroup memory.current tracks the allocation properly
+            "template": lambda duration, size_mb=50: f"echo '[Memory Stress] Mounting tmpfs and allocating {size_mb}MB'; mount -t tmpfs -o size=100M tmpfs /dev/shm 2>/dev/null; i=0; while [ $i -lt {size_mb} ]; do dd if=/dev/zero of=/dev/shm/block$i bs=1M count=1 2>/dev/null; i=$((i+1)); echo \"Allocated $i MB\"; done; echo '[Holding {size_mb}MB for {duration}s]'; sleep {duration}; rm -rf /dev/shm/*; echo '[Memory Released]'"
         },
         "3": {
             "name": "CPU Spike Pattern",
