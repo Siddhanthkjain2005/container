@@ -1196,7 +1196,7 @@ function ExecuteCommandModal({ container, isOpen, onClose, onExecute }) {
 
   const commands = [
     { id: '1', icon: Icons.Cpu, name: 'Variable CPU Load', desc: 'Alternating CPU patterns - triggers anomaly detection', color: 'amber' },
-    { id: '2', icon: Icons.Memory, name: 'Memory Allocation', desc: 'Allocate memory - shows memory limits', color: 'cyan' },
+    { id: '2', icon: Icons.Memory, name: 'Memory Stress', desc: 'Allocate real RAM - shows memory usage', color: 'cyan' },
     { id: '3', icon: Icons.Zap, name: 'CPU Spike Pattern', desc: 'Bursts & idle - best for anomaly demos', color: 'pink' },
     { id: '4', icon: Icons.Activity, name: 'Gradual Increase', desc: 'Slowly increasing load - shows trend detection', color: 'green' },
     { id: '5', icon: Icons.Clock, name: 'Normal Workload', desc: 'Stable load - baseline for health scores', color: 'blue' },
@@ -1578,8 +1578,8 @@ function App() {
         command = `echo '[Variable CPU] Starting alternating load pattern for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 1; done; echo '[Complete]'`
         break
       case '2':
-        // Memory Allocation - SAME AS controller.py
-        command = `echo '[Memory Test] Allocating ${memorySize}MB'; dd if=/dev/zero of=/tmp/memtest bs=1M count=${memorySize} 2>&1 | head -1; echo '[Holding memory for ${duration}s]'; sleep ${duration}; rm -f /tmp/memtest; echo '[Memory Released]'`
+        // Memory Stress - uses /dev/shm (RAM-backed tmpfs) so cgroups track it
+        command = `echo '[Memory Stress] Allocating ${memorySize}MB to RAM'; mkdir -p /dev/shm/memtest; i=0; while [ $i -lt ${memorySize} ]; do dd if=/dev/urandom of=/dev/shm/memtest/block$i bs=1M count=1 2>/dev/null; i=$((i+1)); echo "Allocated $i MB"; done; echo '[Holding ${memorySize}MB for ${duration}s]'; sleep ${duration}; rm -rf /dev/shm/memtest; echo '[Memory Released]'`
         break
       case '3':
         // CPU Spike Pattern - SAME AS controller.py
