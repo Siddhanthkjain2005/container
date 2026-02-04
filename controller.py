@@ -217,7 +217,6 @@ def print_menu():
         ("6", "🗑️", "Delete Container", "Remove a container permanently"),
         ("7", "ℹ️", "System Info", "View system and runtime information"),
         ("8", "🔍", "Inspect Container", "View detailed container information"),
-        ("9", "🔄", "Restart Container", "Restart a container"),
         ("0", "🌐", "Dashboard Info", "How to launch web dashboard"),
         ("q", "🚪", "Quit", "Exit the controller"),
     ]
@@ -754,21 +753,26 @@ echo 'Normal workload complete'
         os.system(f"sudo bash -c 'echo \"{script_content}\" > {script_path} && chmod 755 {script_path}'")
     
     # Run the C runtime with the command
-    # The runtime will: clone with namespaces -> pivot_root -> exec command
     console.print(f"[dim]Executing isolated command...[/]\n")
     
-    # Use runtime to run in isolated namespace
-    args = ["run", "--name", f"{target.name}-exec", 
-            "--rootfs", DEFAULT_ROOTFS,
-            "--memory", "268435456",  # 256MB
-            "--cpus", "100",
-            "--pids", "100",
-            "--", "/bin/sh", f"/tmp/exec_{target.id}.sh"]
-    
+    if target.state == "running":
+        # JOIN EXISTING CONTAINER using 'exec'
+        args = ["exec", target.id, "--cmd", f"/bin/sh /tmp/exec_{target.id}.sh"]
+        isolation_msg = f"Joining running container '{target.name}'"
+    else:
+        # RUN IN NEW EPHEMERAL CONTAINER
+        args = ["run", "--name", f"{target.name}-exec-{int(time.time()) % 1000}", 
+                "--rootfs", DEFAULT_ROOTFS,
+                "--memory", str(int(target.memory_limit_mb * 1024 * 1024)) if target.memory_limit_mb > 0 else "268435456",
+                "--cpus", "100",
+                "--pids", "100",
+                "--", "/bin/sh", f"/tmp/exec_{target.id}.sh"]
+        isolation_msg = "Starting new ephemeral isolated container"
+
     try:
         with Progress(
             SpinnerColumn(style="bright_green"),
-            TextColumn("[bold]Running in isolated container...[/]"),
+            TextColumn(f"[bold]{isolation_msg}...[/]"),
             console=console
         ) as progress:
             task = progress.add_task("exec", total=None)
@@ -822,9 +826,10 @@ def dashboard_info():
     table.add_column("Action", style="bright_white")
     table.add_column("Command", style="bright_yellow")
     
-    table.add_row("1", "Start API server", "minicontainer dashboard")
-    table.add_row("2", "Start frontend", "cd ~/minicontainer/dashboard && npm run dev")
-    table.add_row("3", "Open browser", "http://localhost:5173")
+    table.add_row("1", "Setup Rootfs", "sudo bash scripts/setup_rootfs.sh")
+    table.add_row("2", "Start API Server", "cd backend && sudo PYTHONPATH=. ./venv/bin/python3 -m minicontainer.api")
+    table.add_row("3", "Start Frontend", "cd dashboard && npm run dev")
+    table.add_row("4", "Open Browser", "http://localhost:5173")
     
     console.print(table)
     
@@ -900,58 +905,6 @@ def inspect_container_cmd():
     console.print(f"[dim]Inspected at: {get_ist_time()}[/]")
 
 
-def restart_container_cmd():
-    """Restart a running container"""
-    containers = [c for c in get_containers() if c.state == "running"]
-    if not containers:
-        console.print("[yellow]No running containers to restart.[/]")
-        return
-    
-    console.print(Panel("[bold bright_yellow]🔄 Restart Container[/]", border_style="bright_yellow"))
-    
-    table = Table(show_header=False, box=box.SIMPLE)
-    table.add_column("#", style="bright_cyan", width=4)
-    table.add_column("Name", style="bright_magenta")
-    table.add_column("ID", style="dim")
-    table.add_column("Memory", style="bright_cyan")
-    
-    for i, c in enumerate(containers, 1):
-        table.add_row(str(i), c.name, c.id[:12], f"{c.memory_mb:.1f}MB")
-    
-    console.print(table)
-    
-    choice = Prompt.ask("\n[bright_magenta]Select container to restart[/]", default="1")
-    try:
-        target = containers[int(choice) - 1]
-    except:
-        console.print("[red]Invalid selection[/]")
-        return
-    
-    if Confirm.ask(f"[bold yellow]Restart container '{target.name}'?[/]", default=True):
-        with Progress(
-            SpinnerColumn(style="bright_yellow"),
-            TextColumn("[bold]Stopping container...[/]"),
-            console=console
-        ) as progress:
-            progress.add_task("stop", total=None)
-            
-            # Kill processes in cgroup
-            cgroup = CGROUP_BASE / target.id
-            if (cgroup / "cgroup.procs").exists():
-                procs = (cgroup / "cgroup.procs").read_text().strip().split()
-                for pid in procs:
-                    try:
-                        os.system(f"sudo kill -9 {pid} 2>/dev/null")
-                    except:
-                        pass
-        
-        console.print("[dim]Container stopped. Ready to run new processes.[/]")
-        console.print(f"[bold bright_green]✓ Container '{target.name}' restarted[/]")
-        console.print(f"[dim]Use option 3 (Execute) to run commands in the container.[/]")
-        console.print(f"[dim]Restarted at: {get_ist_time()}[/]")
-    else:
-        console.print("[dim]Cancelled[/]")
-
 def main():
     """Main interactive loop"""
     if os.geteuid() != 0:
@@ -987,8 +940,6 @@ def main():
                 system_info_cmd()
             elif choice == "8":
                 inspect_container_cmd()
-            elif choice == "9":
-                restart_container_cmd()
             elif choice == "0":
                 dashboard_info()
             elif choice.lower() == "q":
