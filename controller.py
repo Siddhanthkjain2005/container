@@ -761,11 +761,38 @@ echo 'Normal workload complete'
     
     if target.state == "running":
         # JOIN EXISTING RUNNING CONTAINER
-        args = ["-x", f"/bin/sh {script_path_in_rootfs}", "exec", target.id]
-        isolation_msg = f"Joining running container '{target.name}'"
+        # Use nsenter to enter the container's namespaces and run the command
+        cgroup_path = CGROUP_BASE / target.id
+        procs_file = cgroup_path / "cgroup.procs"
+        target_pid = None
+        if procs_file.exists():
+            procs = procs_file.read_text().strip().split('\n')
+            if procs and procs[0]:
+                target_pid = procs[0]
+        
+        if target_pid:
+            # Use nsenter to join the running container
+            nsenter_cmd = f"sudo nsenter --target {target_pid} --mount --uts --ipc --pid /bin/sh {script_path_in_rootfs}"
+            isolation_msg = f"Joining running container '{target.name}'"
+            
+            try:
+                with Progress(
+                    SpinnerColumn(style="bright_green"),
+                    TextColumn(f"[bold]{isolation_msg}...[/]"),
+                    console=console
+                ) as progress:
+                    task = progress.add_task("exec", total=None)
+                    result = subprocess.run(nsenter_cmd, shell=True, capture_output=True, text=True, timeout=max(duration + 120, 600))
+                    code, stdout, stderr = result.returncode, result.stdout, result.stderr
+            except subprocess.TimeoutExpired:
+                code, stdout, stderr = -1, "", "Command timed out"
+            except Exception as e:
+                code, stdout, stderr = -1, "", str(e)
+        else:
+            console.print(f"[red]Container '{target.name}' has no running processes[/]")
+            return
     else:
         # START THE EXISTING CONTAINER (it's created or stopped)
-        # Use target's own config if available, otherwise defaults
         mem_limit = str(int(target.memory_limit_mb * 1024 * 1024)) if target.memory_limit_mb > 0 else "268435456"
         cpu_quota = str(target.cpu_limit // 1000) if isinstance(target.cpu_limit, int) else "100"
         pids_limit = str(target.pids_max) if target.pids_max > 0 else "100"
@@ -778,15 +805,17 @@ echo 'Normal workload complete'
                 "run", "--name", target.id,
                 "--", "/bin/sh", script_path_in_rootfs]
         isolation_msg = f"Starting container '{target.name}'"
-
-    try:
-        with Progress(
-            SpinnerColumn(style="bright_green"),
-            TextColumn(f"[bold]{isolation_msg}...[/]"),
-            console=console
-        ) as progress:
-            task = progress.add_task("exec", total=None)
-            code, stdout, stderr = run_runtime(args, timeout=max(duration + 120, 600))
+        
+        try:
+            with Progress(
+                SpinnerColumn(style="bright_green"),
+                TextColumn(f"[bold]{isolation_msg}...[/]"),
+                console=console
+            ) as progress:
+                task = progress.add_task("exec", total=None)
+                code, stdout, stderr = run_runtime(args, timeout=max(duration + 120, 600))
+        except Exception as e:
+            code, stdout, stderr = -1, "", str(e)
         
         console.print("─" * 60)
         

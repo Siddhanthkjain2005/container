@@ -143,8 +143,22 @@ int main(int argc, char *argv[]) {
         }
     } else if (strcmp(cmd, "run") == 0) {
         container_t *c;
-        if (optind < argc && strcmp(argv[optind], "--") == 0) {
-            optind++;
+        /* Parse --name if present after 'run' */
+        while (optind < argc && strncmp(argv[optind], "--", 2) == 0) {
+            if (strcmp(argv[optind], "--name") == 0 && optind + 1 < argc) {
+                strncpy(config.name, argv[optind + 1], sizeof(config.name) - 1);
+                strncpy(config.id, argv[optind + 1], sizeof(config.id) - 1);
+                optind += 2;
+            } else if (strcmp(argv[optind], "--") == 0) {
+                /* Reached end of options */
+                optind++;
+                break;
+            } else {
+                optind++;
+            }
+        }
+        /* Remaining args are the command */
+        if (optind < argc) {
             config.cmd = &argv[optind];
             config.cmd_count = argc - optind;
         }
