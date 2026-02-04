@@ -18,9 +18,9 @@ def get_workload_commands():
             "icon": "💾",
             "desc": "Allocate real RAM - shows memory usage",
             "color": "cyan",
-            # Write files to /tmp (persistent in container rootfs) - this memory persists after exec
-            # Files are kept until the container is stopped/deleted
-            "template": lambda duration, size_mb=50: f"echo '[Memory Stress] Allocating {size_mb}MB to container'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt {size_mb} ]; do dd if=/dev/zero of=/tmp/memstress/block$i bs=1M count=1 2>/dev/null; i=$((i+1)); echo \"Allocated $i MB\"; done; echo '[Memory allocated - will persist until container restart]'; ls -lh /tmp/memstress | tail -3"
+            # Use yes|head instead of dd (device files blocked in chroot)
+            # Files persist in /tmp and are tracked by cgroups
+            "template": lambda duration, size_mb=50: f"echo '[Memory Stress] Allocating {size_mb}MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt {size_mb} ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo \"Allocated $i MB\"; done; echo '[Done - memory persists until container restart]'; ls -sh /tmp/memstress | head -1"
         },
         "3": {
             "name": "CPU Spike Pattern",

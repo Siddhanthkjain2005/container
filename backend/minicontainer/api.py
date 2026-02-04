@@ -543,15 +543,9 @@ async def exec_in_container(container_id: str, request: Request):
             except:
                 pass
             
-            # Determine base command
-            if target_pid:
-                # Use nsenter to join the container's namespaces
-                # We also join the cgroup to ensure resource limits and metrics are applied
-                base_cmd = f"sudo bash -c 'echo $$ > {cgroup_path}/cgroup.procs && exec nsenter --target {target_pid} --mount --uts --ipc --pid /bin/sh'"
-            else:
-                # Fallback: create new namespaces (container might not be running)
-                # Note: This is an emergency fallback; creating nested namespaces this way is tricky
-                base_cmd = f"sudo unshare --mount --pid --uts --ipc --fork bash -c 'echo $$ > {cgroup_path}/cgroup.procs; mount --make-rprivate /; exec chroot {DEFAULT_ROOTFS} /bin/sh'"
+            # Determine base command - use simple chroot + cgroup approach
+            # Skip namespace isolation to ensure file writes persist to rootfs
+            base_cmd = f"sudo bash -c 'echo $$ > {cgroup_path}/cgroup.procs && exec chroot {DEFAULT_ROOTFS} /bin/sh'"
             
             # Execute command by piping the string to the shell
             res = subprocess.run(base_cmd, input=command, shell=True, timeout=300, capture_output=True, text=True)

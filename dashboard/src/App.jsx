@@ -1578,8 +1578,8 @@ function App() {
         command = `echo '[Variable CPU] Starting alternating load pattern for ${duration}s'; END=$(($(date +%s) + ${duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 1; done; echo '[Complete]'`
         break
       case '2':
-        // Memory Stress - write to /tmp (persistent in rootfs) so memory persists after exec
-        command = `echo '[Memory Stress] Allocating ${memorySize}MB to container'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt ${memorySize} ]; do dd if=/dev/zero of=/tmp/memstress/block$i bs=1M count=1 2>/dev/null; i=$((i+1)); echo "Allocated $i MB"; done; echo '[Memory allocated - will persist until container restart]'; ls -lh /tmp/memstress | tail -3`
+        // Memory Stress - use yes|head instead of dd (device files blocked in chroot)
+        command = `echo '[Memory Stress] Allocating ${memorySize}MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt ${memorySize} ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "Allocated $i MB"; done; echo '[Done - memory persists until container restart]'; ls -sh /tmp/memstress | head -1`
         break
       case '3':
         // CPU Spike Pattern - SAME AS controller.py
