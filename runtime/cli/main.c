@@ -84,7 +84,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Warning: Running without root privileges. Some features may not work.\n");
     }
     
-    const char *cmd = argv[1];
     container_config_t config = {0};
     config.limits.cpu_period_us = 100000;
     
@@ -95,25 +94,35 @@ int main(int argc, char *argv[]) {
         {"cpus", required_argument, 0, 'c'},
         {"pids", required_argument, 0, 'p'},
         {"cmd", required_argument, 0, 'x'},
+        {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}
     };
     
     char *run_cmd = NULL;
     int opt;
-    optind = 2;
-    while ((opt = getopt_long(argc, argv, "n:r:m:c:p:x:", opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "n:r:m:c:p:x:h", opts, NULL)) != -1) {
         switch (opt) {
             case 'n': 
                 strncpy(config.name, optarg, sizeof(config.name)-1);
                 strncpy(config.id, optarg, sizeof(config.id)-1); 
                 break;
             case 'r': strncpy(config.rootfs, optarg, sizeof(config.rootfs)-1); break;
-            case 'm': config.limits.memory_limit_bytes = atol(optarg); break;
+            case 'm': config.limits.memory_limit_bytes = atoll(optarg); break;
             case 'c': config.limits.cpu_quota_us = atoi(optarg) * 1000; break;
             case 'p': config.limits.pids_max = atoi(optarg); break;
             case 'x': run_cmd = optarg; break;
+            case 'h': print_usage(argv[0]); return 0;
+            default: print_usage(argv[0]); return 1;
         }
     }
+
+    if (optind >= argc) {
+        fprintf(stderr, "Error: No command specified\n");
+        print_usage(argv[0]);
+        return 1;
+    }
+
+    const char *cmd = argv[optind++];
     
     if (run_cmd) {
         config.cmd = malloc(sizeof(char*) * 4);
@@ -134,6 +143,11 @@ int main(int argc, char *argv[]) {
         }
     } else if (strcmp(cmd, "run") == 0) {
         container_t *c;
+        if (optind < argc && strcmp(argv[optind], "--") == 0) {
+            optind++;
+            config.cmd = &argv[optind];
+            config.cmd_count = argc - optind;
+        }
         if (container_create(&config, &c) == MC_OK) {
             printf("Created container: %s\n", c->config.id);
             if (container_start(c) == MC_OK) {

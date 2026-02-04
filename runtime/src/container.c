@@ -172,14 +172,16 @@ int container_list(container_t ***containers, int *count) {
         container_t *c = calloc(1, sizeof(container_t));
         char line[256];
         while (fgets(line, sizeof(line), fp)) {
-            if (sscanf(line, "id=%64s", c->config.id) == 1) continue;
-            if (sscanf(line, "name=%255s", c->config.name) == 1) continue;
-            if (sscanf(line, "pid=%d", &c->pid) == 1) continue;
-            char state[32];
-            if (sscanf(line, "state=%31s", state) == 1) {
-                if (!strcmp(state,"running")) c->state = CONTAINER_RUNNING;
-                else if (!strcmp(state,"stopped")) c->state = CONTAINER_STOPPED;
-                else c->state = CONTAINER_CREATED;
+            if (strncmp(line, "id=", 3) == 0) sscanf(line, "id=%64s", c->config.id);
+            if (strncmp(line, "name=", 5) == 0) sscanf(line, "name=%255s", c->config.name);
+            if (strncmp(line, "pid=", 4) == 0) sscanf(line, "pid=%d", &c->pid);
+            if (strncmp(line, "state=", 6) == 0) {
+                char state[32];
+                if (sscanf(line, "state=%31s", state) == 1) {
+                    if (!strcmp(state,"running")) c->state = CONTAINER_RUNNING;
+                    else if (!strcmp(state,"stopped")) c->state = CONTAINER_STOPPED;
+                    else c->state = CONTAINER_CREATED;
+                }
             }
         }
         fclose(fp);

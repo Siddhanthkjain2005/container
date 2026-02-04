@@ -738,35 +738,41 @@ echo 'Normal workload complete'
         console.print("[dim]Cannot run isolated container without rootfs.[/]")
         return
     
-    # Use the C runtime to run with full namespace isolation
-    # This creates a new container process with pivot_root into the Alpine rootfs
+    # Write command to a temp script in the rootfs using sudo to avoid permission issues
+    script_content = f"#!/bin/sh\n{cmd}\n"
+    script_name = f"exec_{target.id}.sh"
+    script_path_in_rootfs = f"/tmp/{script_name}"
+    host_script_path = Path(DEFAULT_ROOTFS) / "tmp" / script_name
     
-    # Write command to a temp script in the rootfs
-    script_content = f'''#!/bin/sh
-{cmd}
-'''
-    script_path = Path(DEFAULT_ROOTFS) / "tmp" / f"exec_{target.id}.sh"
     try:
-        script_path.write_text(script_content)
-        script_path.chmod(0o755)
-    except PermissionError:
-        os.system(f"sudo bash -c 'echo \"{script_content}\" > {script_path} && chmod 755 {script_path}'")
+        # Create tmp dir if missing
+        os.system(f"sudo mkdir -p {DEFAULT_ROOTFS}/tmp")
+        # Write content using sudo tee
+        subprocess.run(["sudo", "tee", str(host_script_path)], 
+                      input=script_content, text=True, capture_output=True, check=True)
+        # Make executable
+        os.system(f"sudo chmod +x {host_script_path}")
+    except Exception as e:
+        console.print(f"[red]Failed to write script to rootfs: {e}[/]")
+        return
     
     # Run the C runtime with the command
     console.print(f"[dim]Executing isolated command...[/]\n")
     
     if target.state == "running":
         # JOIN EXISTING CONTAINER using 'exec'
-        args = ["exec", target.id, "--cmd", f"/bin/sh /tmp/exec_{target.id}.sh"]
+        # Fixed runtime expects: runtime [options] exec ID
+        args = ["-x", f"/bin/sh {script_path_in_rootfs}", "exec", target.id]
         isolation_msg = f"Joining running container '{target.name}'"
     else:
         # RUN IN NEW EPHEMERAL CONTAINER
-        args = ["run", "--name", f"{target.name}-exec-{int(time.time()) % 1000}", 
-                "--rootfs", DEFAULT_ROOTFS,
-                "--memory", str(int(target.memory_limit_mb * 1024 * 1024)) if target.memory_limit_mb > 0 else "268435456",
-                "--cpus", "100",
-                "--pids", "100",
-                "--", "/bin/sh", f"/tmp/exec_{target.id}.sh"]
+        # Fixed runtime expects: runtime [options] run -- args
+        args = ["-r", DEFAULT_ROOTFS,
+                "-m", str(int(target.memory_limit_mb * 1024 * 1024)) if target.memory_limit_mb > 0 else "268435456",
+                "-c", "100",
+                "-p", "100",
+                "run", "--name", f"{target.name}-exec-{int(time.time()) % 1000}",
+                "--", "/bin/sh", script_path_in_rootfs]
         isolation_msg = "Starting new ephemeral isolated container"
 
     try:
@@ -810,9 +816,9 @@ echo 'Normal workload complete'
     
     # Cleanup script
     try:
-        script_path.unlink()
+        os.system(f"sudo rm -f {host_script_path}")
     except:
-        os.system(f"sudo rm -f {script_path}")
+        pass
     
     console.print(f"\n[dim]Executed at: {get_ist_time()}[/]")
     console.print("[bold bright_green]✓ Host filesystem was PROTECTED - command ran in isolated Alpine rootfs[/]")
