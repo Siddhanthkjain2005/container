@@ -816,36 +816,34 @@ echo 'Normal workload complete'
                 code, stdout, stderr = run_runtime(args, timeout=max(duration + 120, 600))
         except Exception as e:
             code, stdout, stderr = -1, "", str(e)
-        
-        console.print("─" * 60)
-        
-        if stdout.strip():
-            # Filter out runtime logs
-            output_lines = [l for l in stdout.strip().split('\n') 
-                          if not l.startswith('[INFO]') and not l.startswith('[DEBUG]')]
-            if output_lines:
-                console.print(f"\n[bold bright_green]Output:[/]")
-                console.print(Panel('\n'.join(output_lines), border_style="bright_green"))
-        
-        if code == 0:
-            console.print(f"\n[bold bright_green]✓ Command completed successfully in isolated container[/]")
-        else:
-            console.print(f"\n[bold yellow]Command exited with code {code}[/]")
-            if stderr.strip():
-                console.print(f"[dim]{stderr.strip()}[/]")
-        
-        # Show resource usage from cgroup
-        cgroup_path = CGROUP_BASE / target.id
-        try:
-            if (cgroup_path / "memory.current").exists():
-                mem = int((cgroup_path / "memory.current").read_text().strip())
-                console.print(f"\n[bold bright_cyan]📊 Resource Usage:[/]")
-                console.print(f"  [bright_cyan]💾 Memory:[/] {mem / 1048576:.2f} MB")
-        except:
-            pass
-        
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/]")
+    
+    # Display output (common for both cases)
+    console.print("─" * 60)
+    
+    if stdout.strip():
+        # Filter out runtime logs
+        output_lines = [l for l in stdout.strip().split('\n') 
+                      if not l.startswith('[INFO]') and not l.startswith('[DEBUG]')]
+        if output_lines:
+            console.print(f"\n[bold bright_green]Output:[/]")
+            console.print(Panel('\n'.join(output_lines), border_style="bright_green"))
+    
+    if code == 0:
+        console.print(f"\n[bold bright_green]✓ Command completed successfully in isolated container[/]")
+    else:
+        console.print(f"\n[bold yellow]Command exited with code {code}[/]")
+        if stderr.strip():
+            console.print(f"[dim]{stderr.strip()}[/]")
+    
+    # Show resource usage from cgroup
+    cgroup_path = CGROUP_BASE / target.id
+    try:
+        if (cgroup_path / "memory.current").exists():
+            mem = int((cgroup_path / "memory.current").read_text().strip())
+            console.print(f"\n[bold bright_cyan]📊 Resource Usage:[/]")
+            console.print(f"  [bright_cyan]💾 Memory:[/] {mem / 1048576:.2f} MB")
+    except:
+        pass
     
     # Cleanup script
     try:
