@@ -760,20 +760,24 @@ echo 'Normal workload complete'
     console.print(f"[dim]Executing isolated command...[/]\n")
     
     if target.state == "running":
-        # JOIN EXISTING CONTAINER using 'exec'
-        # Fixed runtime expects: runtime [options] exec ID
+        # JOIN EXISTING RUNNING CONTAINER
         args = ["-x", f"/bin/sh {script_path_in_rootfs}", "exec", target.id]
         isolation_msg = f"Joining running container '{target.name}'"
     else:
-        # RUN IN NEW EPHEMERAL CONTAINER
-        # Fixed runtime expects: runtime [options] run -- args
-        args = ["-r", DEFAULT_ROOTFS,
-                "-m", str(int(target.memory_limit_mb * 1024 * 1024)) if target.memory_limit_mb > 0 else "268435456",
-                "-c", "100",
-                "-p", "100",
-                "run", "--name", f"{target.name}-exec-{int(time.time()) % 1000}",
+        # START THE EXISTING CONTAINER (it's created or stopped)
+        # Use target's own config if available, otherwise defaults
+        mem_limit = str(int(target.memory_limit_mb * 1024 * 1024)) if target.memory_limit_mb > 0 else "268435456"
+        cpu_quota = str(target.cpu_limit // 1000) if isinstance(target.cpu_limit, int) else "100"
+        pids_limit = str(target.pids_max) if target.pids_max > 0 else "100"
+        rootfs_path = target.rootfs if target.rootfs else DEFAULT_ROOTFS
+        
+        args = ["-r", rootfs_path,
+                "-m", mem_limit,
+                "-c", cpu_quota,
+                "-p", pids_limit,
+                "run", "--name", target.id,
                 "--", "/bin/sh", script_path_in_rootfs]
-        isolation_msg = "Starting new ephemeral isolated container"
+        isolation_msg = f"Starting container '{target.name}'"
 
     try:
         with Progress(
