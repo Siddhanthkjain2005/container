@@ -14,11 +14,13 @@ def get_workload_commands():
             "template": lambda duration: f"echo '[Variable CPU] Starting alternating load pattern for {duration}s'; END=$(($(date +%s) + {duration})); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 1; done; echo '[Complete]'"
         },
         "2": {
-            "name": "Memory Allocation",
+            "name": "Memory Stress",
             "icon": "💾",
-            "desc": "Allocate memory - shows memory limits",
+            "desc": "Allocate real RAM - shows memory usage",
             "color": "cyan",
-            "template": lambda duration, size_mb=100: f"echo '[Memory Test] Allocating {size_mb}MB'; dd if=/dev/zero of=/tmp/memtest bs=1M count={size_mb} 2>&1 | head -1; echo '[Holding memory for {duration}s]'; sleep {duration}; rm -f /tmp/memtest; echo '[Memory Released]'"
+            # Use /dev/shm (RAM-backed tmpfs) to actually hold memory in RAM
+            # This ensures cgroup memory.current tracks the allocation
+            "template": lambda duration, size_mb=50: f"echo '[Memory Stress] Allocating {size_mb}MB to RAM'; mkdir -p /dev/shm/memtest; i=0; while [ $i -lt {size_mb} ]; do dd if=/dev/urandom of=/dev/shm/memtest/block$i bs=1M count=1 2>/dev/null; i=$((i+1)); echo \"Allocated $i MB\"; done; echo '[Holding {size_mb}MB for {duration}s]'; sleep {duration}; rm -rf /dev/shm/memtest; echo '[Memory Released]'"
         },
         "3": {
             "name": "CPU Spike Pattern",
