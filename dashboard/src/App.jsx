@@ -1639,7 +1639,7 @@ function App() {
             { id: 'dashboard', label: 'Dashboard', icon: Icons.Layers },
             { id: 'stats', label: 'Resources', icon: Icons.BarChart },
             { id: 'insights', label: 'Insights', icon: Icons.Sparkles },
-            { id: 'analytics', label: 'ML Analytics', icon: Icons.Brain },
+            { id: 'analytics', label: 'Analytics', icon: Icons.Brain },
             { id: 'about', label: 'About', icon: Icons.Info },
           ].map(tab => (
             <button
@@ -2172,7 +2172,7 @@ function App() {
         {currentPage === 'analytics' && (
           <div className="page-content">
             <div className="page-header">
-              <h2>ML Analytics & Anomaly Detection</h2>
+              <h2>Z-Score Analytics</h2>
               <div className="live-clock">
                 <Icons.Clock />
                 <span className="clock-time">{liveTime}</span>
@@ -2199,54 +2199,6 @@ function App() {
               </div>
             </div>
 
-            {/* System Overview Stats */}
-            <div className="section">
-              <h3><Icons.PieChart /> System Overview</h3>
-              <div className="system-overview-grid">
-                <div className="overview-stat-card">
-                  <span className="overview-stat-icon blue"><Icons.Box /></span>
-                  <div className="overview-stat-content">
-                    <span className="overview-stat-value">{containers.length}</span>
-                    <span className="overview-stat-label">Containers</span>
-                  </div>
-                </div>
-                <div className="overview-stat-card">
-                  <span className="overview-stat-icon green"><Icons.Heart /></span>
-                  <div className="overview-stat-content">
-                    <span className="overview-stat-value">{(systemStats.average_health_score || 100).toFixed(0)}</span>
-                    <span className="overview-stat-label">Avg Health</span>
-                  </div>
-                </div>
-                <div className="overview-stat-card">
-                  <span className="overview-stat-icon amber"><Icons.Cpu /></span>
-                  <div className="overview-stat-content">
-                    <span className="overview-stat-value">{(systemStats.total_cpu_percent || 0).toFixed(1)}%</span>
-                    <span className="overview-stat-label">Total CPU</span>
-                  </div>
-                </div>
-                <div className="overview-stat-card">
-                  <span className="overview-stat-icon cyan"><Icons.Memory /></span>
-                  <div className="overview-stat-content">
-                    <span className="overview-stat-value">{(systemStats.total_memory_mb || 0).toFixed(0)} MB</span>
-                    <span className="overview-stat-label">Total Memory</span>
-                  </div>
-                </div>
-                <div className="overview-stat-card">
-                  <span className="overview-stat-icon pink"><Icons.AlertTriangle /></span>
-                  <div className="overview-stat-content">
-                    <span className="overview-stat-value">{anomalies.length}</span>
-                    <span className="overview-stat-label">Anomalies</span>
-                  </div>
-                </div>
-                <div className="overview-stat-card">
-                  <span className="overview-stat-icon purple"><Icons.Sparkles /></span>
-                  <div className="overview-stat-content">
-                    <span className="overview-stat-value">{(systemStats.average_efficiency_score || 100).toFixed(0)}</span>
-                    <span className="overview-stat-label">Efficiency</span>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             {/* Container Health with Multiple Scores */}
             <div className="section">
@@ -2325,93 +2277,29 @@ function App() {
               </div>
             </div>
 
-            {/* Anomaly Timeline and Distribution */}
+            {/* Z-Score Algorithm Explanation */}
             <div className="section">
-              <h3><Icons.AlertTriangle /> Anomaly Analysis</h3>
-              <div className="anomaly-analysis-grid">
-                <div className="anomaly-stats-panel">
-                  <h4>Anomaly Summary</h4>
-                  <div className="anomaly-stats">
-                    <div className="anomaly-stat">
-                      <span className="anomaly-stat-value high">{anomalies.filter(a => a.severity === 'high').length}</span>
-                      <span className="anomaly-stat-label">High Severity</span>
-                    </div>
-                    <div className="anomaly-stat">
-                      <span className="anomaly-stat-value medium">{anomalies.filter(a => a.severity === 'medium').length}</span>
-                      <span className="anomaly-stat-label">Medium Severity</span>
-                    </div>
-                    <div className="anomaly-stat">
-                      <span className="anomaly-stat-value low">{anomalies.filter(a => a.severity === 'low').length}</span>
-                      <span className="anomaly-stat-label">Low Severity</span>
-                    </div>
-                  </div>
-
-                  <h4>By Type</h4>
-                  <div className="anomaly-types">
-                    {Object.entries(
-                      anomalies.reduce((acc, a) => {
-                        acc[a.type] = (acc[a.type] || 0) + 1
-                        return acc
-                      }, {})
-                    ).slice(0, 5).map(([type, count]) => (
-                      <div key={type} className="anomaly-type-row">
-                        <span className="anomaly-type-name">{type.replace(/_/g, ' ')}</span>
-                        <span className="anomaly-type-count">{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="anomaly-timeline-panel">
-                  <h4>Recent Anomalies</h4>
-                  <div className="anomaly-list">
-                    {anomalies.length === 0 ? (
-                      <div className="no-anomalies">
-                        <span className="icon-sm green"><Icons.Heart /></span>
-                        <span>No anomalies detected - all systems normal</span>
-                      </div>
-                    ) : (
-                      anomalies.slice(-15).reverse().map((anomaly, i) => (
-                        <div key={i} className="anomaly-item">
-                          <span className="anomaly-time">
-                            {formatToIST(anomaly.timestamp)}
-                          </span>
-                          <span className={`anomaly-badge ${anomaly.severity}`}>
-                            {anomaly.severity?.toUpperCase()}
-                          </span>
-                          <span className="anomaly-type">{anomaly.type?.replace(/_/g, ' ')}</span>
-                          <span className="anomaly-msg">{anomaly.message}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ML Algorithm Explanation */}
-            <div className="section">
-              <h3><Icons.Brain /> ML Algorithms</h3>
+              <h3><Icons.Activity /> How Z-Score Works</h3>
               <div className="info-cards">
                 <div className="info-card">
                   <span className="icon-wrapper blue"><Icons.Activity /></span>
-                  <h4>Adaptive Z-Score</h4>
-                  <p>Uses exponential moving averages with adaptive thresholds that adjust based on container volatility patterns.</p>
+                  <h4>Z-Score Formula</h4>
+                  <p>Z = (Current Value - Average) / Standard Deviation. Measures how many standard deviations a value is from the mean.</p>
                 </div>
                 <div className="info-card">
                   <span className="icon-wrapper green"><Icons.Heart /></span>
-                  <h4>Multi-Score Health</h4>
-                  <p>Three distinct scores: Health (current state), Stability (variance), and Efficiency (optimal resource usage).</p>
+                  <h4>Health Score</h4>
+                  <p>Based on volatility (rate of change), variance, and anomaly count. High stability = high health.</p>
                 </div>
                 <div className="info-card">
-                  <span className="icon-wrapper amber"><Icons.TrendUp /></span>
-                  <h4>Trend Prediction</h4>
-                  <p>Linear regression on historical data predicts future CPU and memory usage 30 seconds ahead.</p>
+                  <span className="icon-wrapper amber"><Icons.Gauge /></span>
+                  <h4>Stability Score</h4>
+                  <p>Coefficient of Variation (CV = std/mean). Low CV indicates consistent, stable resource usage patterns.</p>
                 </div>
                 <div className="info-card">
-                  <span className="icon-wrapper pink"><Icons.AlertTriangle /></span>
-                  <h4>Exhaustion Detection</h4>
-                  <p>Predicts when resources will hit limits based on current consumption rate and available capacity.</p>
+                  <span className="icon-wrapper pink"><Icons.Sparkles /></span>
+                  <h4>Efficiency Score</h4>
+                  <p>Optimal usage is 10-70%. Penalizes idle resources (waste) and overloaded resources (inefficiency).</p>
                 </div>
               </div>
             </div>
