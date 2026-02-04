@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
                 optind++;
             }
         }
-        /* Remaining args are the command */
+        /* Remaining args are the command - point to argv (not malloc'd) */
         if (optind < argc) {
             config.cmd = &argv[optind];
             config.cmd_count = argc - optind;
@@ -170,9 +170,11 @@ int main(int argc, char *argv[]) {
                 waitpid(c->pid, &status, 0);
                 printf("Container exited with code %d\n", WEXITSTATUS(status));
             }
-            container_delete(c);
+            /* Don't delete - keep container persistent */
             container_free(c);
         }
+        /* Clear config.cmd since it points to argv, not malloc'd memory */
+        config.cmd = NULL;
     } else if (strcmp(cmd, "start") == 0 || strcmp(cmd, "stop") == 0 || strcmp(cmd, "delete") == 0) {
         if (optind >= argc) { fprintf(stderr, "Container ID required\n"); return 1; }
         container_t **list; int count;
