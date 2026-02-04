@@ -18,9 +18,9 @@ def get_workload_commands():
             "icon": "💾",
             "desc": "Allocate real RAM - shows memory usage",
             "color": "cyan",
-            # Mount tmpfs on /dev/shm first, then allocate memory files
-            # This ensures cgroup memory.current tracks the allocation properly
-            "template": lambda duration, size_mb=50: f"echo '[Memory Stress] Mounting tmpfs and allocating {size_mb}MB'; mount -t tmpfs -o size=100M tmpfs /dev/shm 2>/dev/null; i=0; while [ $i -lt {size_mb} ]; do dd if=/dev/zero of=/dev/shm/block$i bs=1M count=1 2>/dev/null; i=$((i+1)); echo \"Allocated $i MB\"; done; echo '[Holding {size_mb}MB for {duration}s]'; sleep {duration}; rm -rf /dev/shm/*; echo '[Memory Released]'"
+            # Write files to /tmp (persistent in container rootfs) - this memory persists after exec
+            # Files are kept until the container is stopped/deleted
+            "template": lambda duration, size_mb=50: f"echo '[Memory Stress] Allocating {size_mb}MB to container'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt {size_mb} ]; do dd if=/dev/zero of=/tmp/memstress/block$i bs=1M count=1 2>/dev/null; i=$((i+1)); echo \"Allocated $i MB\"; done; echo '[Memory allocated - will persist until container restart]'; ls -lh /tmp/memstress | tail -3"
         },
         "3": {
             "name": "CPU Spike Pattern",

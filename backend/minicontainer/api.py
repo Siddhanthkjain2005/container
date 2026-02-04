@@ -508,6 +508,9 @@ async def exec_in_container(container_id: str, request: Request):
     except:
         command = "echo Hello"
     
+    # DEBUG: Log the command received
+    print(f"[DEBUG] Exec received for {container_id}: {command[:200]}...")
+    
     DEFAULT_ROOTFS = "/tmp/alpine-rootfs"
     
     # Verify rootfs exists
