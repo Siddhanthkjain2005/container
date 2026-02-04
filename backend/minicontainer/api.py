@@ -553,17 +553,28 @@ async def exec_in_container(container_id: str, request: Request):
             # Execute command by piping the string to the shell
             res = subprocess.run(base_cmd, input=command, shell=True, timeout=300, capture_output=True, text=True)
             
+            # Print command output to backend terminal
+            if res.stdout.strip():
+                print(f"\n{'='*60}")
+                print(f"[CONTAINER {container_id}] Command Output:")
+                print(f"{'='*60}")
+                for line in res.stdout.strip().split('\n'):
+                    print(f"  {line}")
+                print(f"{'='*60}\n")
+            
             if res.returncode != 0:
                 # Filter out verbose noisy shell errors if command still "worked" (like fork bomb)
                 stderr = res.stderr.strip()
                 if "can't fork" in stderr or "Killed" in stderr:
-                    print(f"Exec command hit limits (code {res.returncode})")
-                else:
-                    print(f"Exec command failed (code {res.returncode}): {stderr}")
+                    print(f"[CONTAINER {container_id}] Command hit resource limits (exit code {res.returncode})")
+                elif stderr:
+                    print(f"[CONTAINER {container_id}] Error: {stderr[:200]}")
             else:
-                print(f"Exec command succeeded: {command[:50]}...")
+                print(f"[CONTAINER {container_id}] Command completed successfully")
+        except subprocess.TimeoutExpired:
+            print(f"[CONTAINER {container_id}] Command timed out after 300s")
         except Exception as e:
-            print(f"Exec failed with exception: {e}")
+            print(f"[CONTAINER {container_id}] Exec failed: {e}")
     
     # Start in background thread
     thread = threading.Thread(target=run_in_cgroup, daemon=True)
