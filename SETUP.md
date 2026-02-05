@@ -56,8 +56,8 @@ npm run dev
 
 ## ⌨️ Running the CLI
 ```bash
-cd backend
-sudo PYTHONPATH=. ./venv/bin/python3 -m minicontainer.cli --help
+python3 controller.py
+in root
 ```
 
 ## ☁️ Vercel Deployment
