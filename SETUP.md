@@ -45,7 +45,7 @@ cd dashboard && npm install && cd ..
 ## 🖥️ Running the Backend
 ```bash
 cd backend
-sudo PYTHONPATH=. ./venv/bin/python3 -m minicontainer.api
+sudo PYTHONPATH=. ./venv/bin/python3 -m kernelsight.api
 ```
 
 ## 📊 Running the Dashboard
