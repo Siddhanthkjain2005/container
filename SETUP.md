@@ -27,6 +27,7 @@ cd runtime && make && cd ..
 # 4. Setup the root filesystem (CRITICAL)
 # This creates a minimal isolated environment for your containers
 sudo bash scripts/restore.sh
+sudo bash scripts/setup_rootfs.sh
 
 # 5. Setup Python backend
 cd backend
