@@ -57,7 +57,7 @@ npm run dev
 ## ⌨️ Running the CLI
 ```bash
 python3 controller.py
-in root
+#in root
 ```
 
 ## ☁️ Vercel Deployment
