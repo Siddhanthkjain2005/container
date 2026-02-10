@@ -1,4 +1,4 @@
-# MiniContainer - Complete Project Report
+# KernelSight - Complete Project Report
 
 > **Project**: Linux Container Runtime with Dashboard  
 > **Repository**: [github.com/Siddhanthkjain2005/container](https://github.com/Siddhanthkjain2005/container)  
@@ -9,7 +9,7 @@
 
 ## 📋 Executive Summary
 
-MiniContainer is a **lightweight Linux container runtime** built from scratch, demonstrating the core technologies that power Docker and similar container platforms. The project implements:
+KernelSight is a **lightweight Linux container runtime** built from scratch, demonstrating the core technologies that power Docker and similar container platforms. The project implements:
 
 - **Namespace Isolation** (PID, MNT, UTS, IPC, NET, USER, CGROUP)
 - **Cgroup v2 Resource Limits** (CPU, Memory, PIDs)
@@ -23,12 +23,12 @@ MiniContainer is a **lightweight Linux container runtime** built from scratch, d
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        MiniContainer Architecture                       │
+│                        KernelSight Architecture                       │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────┐ │
 │  │  React Dashboard │◄──►│  FastAPI Backend │◄──►│  C Runtime Library │ │
-│  │  (Vite + React) │    │  (Python 3.11+)  │    │ (libminicontainer) │ │
+│  │  (Vite + React) │    │  (Python 3.11+)  │    │ (libkernelsight) │ │
 │  └─────────────────┘    └─────────────────┘    └─────────────────────┘ │
 │         │                       │                        │              │
 │         │ HTTP/WebSocket        │ ctypes FFI             │ syscalls    │
@@ -50,7 +50,7 @@ MiniContainer is a **lightweight Linux container runtime** built from scratch, d
 ## 📁 Project Structure
 
 ```
-minicontainer/
+kernelsight/
 ├── runtime/                    # C Runtime Library
 │   ├── include/
 │   │   └── container.h         # Header file (307 lines)
@@ -62,12 +62,12 @@ minicontainer/
 │   ├── cli/
 │   │   └── main.c              # CLI entry point (250 lines)
 │   ├── build/
-│   │   ├── libminicontainer.so # Shared library
-│   │   └── minicontainer-runtime # CLI binary
+│   │   ├── libkernelsight.so # Shared library
+│   │   └── kernelsight-runtime # CLI binary
 │   └── Makefile                # Build configuration
 │
 ├── backend/                    # Python Backend
-│   ├── minicontainer/
+│   ├── kernelsight/
 │   │   ├── __init__.py
 │   │   ├── api.py              # FastAPI server (430 lines)
 │   │   ├── cli.py              # Click CLI (424 lines)
@@ -200,9 +200,9 @@ else:
 #### Metrics Collection
 ```python
 # Reads directly from Linux kernel cgroup files:
-memory_bytes = Path("/sys/fs/cgroup/minicontainer/{id}/memory.current")
-cpu_stat = Path("/sys/fs/cgroup/minicontainer/{id}/cpu.stat")
-pids_current = Path("/sys/fs/cgroup/minicontainer/{id}/pids.current")
+memory_bytes = Path("/sys/fs/cgroup/kernelsight/{id}/memory.current")
+cpu_stat = Path("/sys/fs/cgroup/kernelsight/{id}/cpu.stat")
+pids_current = Path("/sys/fs/cgroup/kernelsight/{id}/pids.current")
 ```
 
 ---
@@ -256,7 +256,7 @@ command = `dd if=/dev/zero of=/dev/shm/memtest bs=1M count=${memorySize} &&
 
 ### Real-time Data Sources
 ```
-/sys/fs/cgroup/minicontainer/{container_id}/
+/sys/fs/cgroup/kernelsight/{container_id}/
 ├── memory.current      # Current memory usage (bytes)
 ├── memory.max          # Memory limit
 ├── cpu.stat            # CPU usage (usage_usec)
@@ -277,8 +277,8 @@ cpu_percent = (delta_cpu_ns / (delta_time_s * 1e9)) * 100
 ### Local Development
 ```bash
 # Start backend
-cd minicontainer
-sudo PYTHONPATH=./backend ./backend/venv/bin/python3 -m minicontainer.cli dashboard
+cd kernelsight
+sudo PYTHONPATH=./backend ./backend/venv/bin/python3 -m kernelsight.cli dashboard
 
 # Start frontend (separate terminal)
 cd dashboard && npm run dev
@@ -328,19 +328,19 @@ ngrok http 8000
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| [container.c](file:///home/student/.gemini/antigravity/scratch/minicontainer/runtime/src/container.c) | 286 | Container lifecycle management |
-| [namespace.c](file:///home/student/.gemini/antigravity/scratch/minicontainer/runtime/src/namespace.c) | 302 | Namespace creation and entry |
-| [cgroup.c](file:///home/student/.gemini/antigravity/scratch/minicontainer/runtime/src/cgroup.c) | 206 | Cgroup v2 resource limits |
-| [api.py](file:///home/student/.gemini/antigravity/scratch/minicontainer/backend/minicontainer/api.py) | 430 | FastAPI REST endpoints |
-| [cli.py](file:///home/student/.gemini/antigravity/scratch/minicontainer/backend/minicontainer/cli.py) | 424 | Click CLI interface |
-| [App.jsx](file:///home/student/.gemini/antigravity/scratch/minicontainer/dashboard/src/App.jsx) | 827 | React dashboard components |
-| [App.css](file:///home/student/.gemini/antigravity/scratch/minicontainer/dashboard/src/App.css) | 1383 | Premium dark theme styling |
+| [container.c](file:///home/student/.gemini/antigravity/scratch/kernelsight/runtime/src/container.c) | 286 | Container lifecycle management |
+| [namespace.c](file:///home/student/.gemini/antigravity/scratch/kernelsight/runtime/src/namespace.c) | 302 | Namespace creation and entry |
+| [cgroup.c](file:///home/student/.gemini/antigravity/scratch/kernelsight/runtime/src/cgroup.c) | 206 | Cgroup v2 resource limits |
+| [api.py](file:///home/student/.gemini/antigravity/scratch/kernelsight/backend/kernelsight/api.py) | 430 | FastAPI REST endpoints |
+| [cli.py](file:///home/student/.gemini/antigravity/scratch/kernelsight/backend/kernelsight/cli.py) | 424 | Click CLI interface |
+| [App.jsx](file:///home/student/.gemini/antigravity/scratch/kernelsight/dashboard/src/App.jsx) | 827 | React dashboard components |
+| [App.css](file:///home/student/.gemini/antigravity/scratch/kernelsight/dashboard/src/App.css) | 1383 | Premium dark theme styling |
 
 ---
 
 ## ✅ Conclusion
 
-MiniContainer successfully demonstrates the core technologies behind modern container runtimes:
+KernelSight successfully demonstrates the core technologies behind modern container runtimes:
 
 - **Namespaces** for process isolation
 - **Cgroups** for resource control

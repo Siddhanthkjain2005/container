@@ -1,4 +1,4 @@
-"""MiniContainer - Interactive CLI with Enhanced Monitoring"""
+"""KernelSight - Interactive CLI with Enhanced Monitoring"""
 
 import os
 import sys
@@ -25,9 +25,9 @@ from rich import box
 console = Console()
 
 # Runtime path - Use absolute path
-RUNTIME_PATH = Path("/home/student/container/runtime/build/minicontainer-runtime")
-CGROUP_BASE = Path("/sys/fs/cgroup/minicontainer")
-STATE_DIR = Path("/var/lib/minicontainer")
+RUNTIME_PATH = Path("/home/student/container/runtime/build/kernelsight-runtime")
+CGROUP_BASE = Path("/sys/fs/cgroup/kernelsight")
+STATE_DIR = Path("/var/lib/kernelsight")
 LOG_DIR = STATE_DIR / "logs"
 
 # ASCII Art Banner
@@ -154,16 +154,16 @@ def get_container_list():
 @click.option("--version", "-v", is_flag=True, help="Show version")
 @click.pass_context
 def cli(ctx, version):
-    """🐳 MiniContainer - Lightweight Container Management
+    """🐳 KernelSight - Lightweight Container Management
     
     A container runtime built with Linux cgroups v2 and namespaces.
     
     \b
     QUICK START:
-      minicontainer create --name myapp --rootfs /path/to/rootfs
-      minicontainer start myapp
-      minicontainer monitor myapp
-      minicontainer stop myapp
+      kernelsight create --name myapp --rootfs /path/to/rootfs
+      kernelsight start myapp
+      kernelsight monitor myapp
+      kernelsight stop myapp
     """
     if version:
         console.print(BANNER)
@@ -173,7 +173,7 @@ def cli(ctx, version):
     
     if ctx.invoked_subcommand is None:
         console.print(BANNER)
-        console.print("[dim]Type 'minicontainer --help' for available commands[/dim]\n")
+        console.print("[dim]Type 'kernelsight --help' for available commands[/dim]\n")
 
 # ============ CONTAINER LIFECYCLE COMMANDS ============
 
@@ -190,9 +190,9 @@ def create(name, rootfs, memory, cpus, pids, cmd, env):
     
     \b
     Examples:
-      minicontainer create -n myapp -r /tmp/alpine-rootfs
-      minicontainer create -n web -r /tmp/rootfs -m 512m -c 0.5 -p 50
-      minicontainer create -n test -r /tmp/rootfs -e APP_ENV=prod -e DEBUG=0
+      kernelsight create -n myapp -r /tmp/alpine-rootfs
+      kernelsight create -n web -r /tmp/rootfs -m 512m -c 0.5 -p 50
+      kernelsight create -n test -r /tmp/rootfs -e APP_ENV=prod -e DEBUG=0
     """
     if not check_runtime():
         return
@@ -201,7 +201,7 @@ def create(name, rootfs, memory, cpus, pids, cmd, env):
     rootfs_path = Path(rootfs)
     if not rootfs_path.exists():
         console.print(f"[red]✗ Rootfs directory not found: {rootfs}[/red]")
-        console.print("[dim]Create a rootfs with: minicontainer rootfs create alpine[/dim]")
+        console.print("[dim]Create a rootfs with: kernelsight rootfs create alpine[/dim]")
         return
     
     args = ["create", "--name", name, "--rootfs", rootfs]
@@ -250,9 +250,9 @@ def create(name, rootfs, memory, cpus, pids, cmd, env):
         ))
         
         console.print(f"\n[bold]Next steps:[/bold]")
-        console.print(f"  1. Start:   [cyan]minicontainer start {name}[/cyan]")
-        console.print(f"  2. Monitor: [cyan]minicontainer monitor {name}[/cyan]")
-        console.print(f"  3. Stop:    [cyan]minicontainer stop {name}[/cyan]")
+        console.print(f"  1. Start:   [cyan]kernelsight start {name}[/cyan]")
+        console.print(f"  2. Monitor: [cyan]kernelsight monitor {name}[/cyan]")
+        console.print(f"  3. Stop:    [cyan]kernelsight stop {name}[/cyan]")
     else:
         console.print(f"[red]✗ Failed to create container[/red]")
         if stderr:
@@ -267,9 +267,9 @@ def start(container, detach, timeout):
     
     \b
     Examples:
-      minicontainer start myapp
-      minicontainer start myapp -d        # Run in background
-      minicontainer start myapp -t 60     # Auto-stop after 60 seconds
+      kernelsight start myapp
+      kernelsight start myapp -d        # Run in background
+      kernelsight start myapp -t 60     # Auto-stop after 60 seconds
     """
     if not check_runtime():
         return
@@ -289,9 +289,9 @@ def start(container, detach, timeout):
         console.print(f"\n[green]✓ Container '{container}' is now running[/green]")
         console.print(f"  Time: {get_ist_time()}")
         console.print(f"\n[bold]Commands:[/bold]")
-        console.print(f"  Monitor: [cyan]minicontainer monitor {container}[/cyan]")
-        console.print(f"  Stop:    [cyan]minicontainer stop {container}[/cyan]")
-        console.print(f"  Logs:    [cyan]minicontainer logs {container}[/cyan]")
+        console.print(f"  Monitor: [cyan]kernelsight monitor {container}[/cyan]")
+        console.print(f"  Stop:    [cyan]kernelsight stop {container}[/cyan]")
+        console.print(f"  Logs:    [cyan]kernelsight logs {container}[/cyan]")
     else:
         console.print(f"[red]✗ Failed to start container[/red]")
         if stderr:
@@ -306,9 +306,9 @@ def stop(container, force, timeout):
     
     \b
     Examples:
-      minicontainer stop myapp
-      minicontainer stop myapp -f         # Force kill immediately
-      minicontainer stop myapp -t 5       # Wait 5s before force kill
+      kernelsight stop myapp
+      kernelsight stop myapp -f         # Force kill immediately
+      kernelsight stop myapp -t 5       # Wait 5s before force kill
     """
     if not check_runtime():
         return
@@ -339,8 +339,8 @@ def restart(container, force):
     
     \b
     Examples:
-      minicontainer restart myapp
-      minicontainer restart myapp -f      # Force restart
+      kernelsight restart myapp
+      kernelsight restart myapp -f      # Force restart
     """
     if not check_runtime():
         return
@@ -371,9 +371,9 @@ def rm(container, force, volumes):
     
     \b
     Examples:
-      minicontainer rm myapp
-      minicontainer rm myapp -f           # Force remove even if running
-      minicontainer rm myapp -f -v        # Also remove volumes
+      kernelsight rm myapp
+      kernelsight rm myapp -f           # Force remove even if running
+      kernelsight rm myapp -f -v        # Also remove volumes
     """
     if not check_runtime():
         return
@@ -412,10 +412,10 @@ def ps(show_all, quiet, fmt):
     
     \b
     Examples:
-      minicontainer ps                    # Show running containers
-      minicontainer ps -a                 # Show all containers
-      minicontainer ps -q                 # Only show IDs
-      minicontainer ps --format json      # JSON output
+      kernelsight ps                    # Show running containers
+      kernelsight ps -a                 # Show all containers
+      kernelsight ps -q                 # Only show IDs
+      kernelsight ps --format json      # JSON output
     """
     containers = get_container_list()
     
@@ -473,7 +473,7 @@ def ps(show_all, quiet, fmt):
     
     if len(containers) == 0:
         console.print("[dim]No containers found. Create one with:[/dim]")
-        console.print("  [cyan]minicontainer create -n myapp -r /path/to/rootfs[/cyan]")
+        console.print("  [cyan]kernelsight create -n myapp -r /path/to/rootfs[/cyan]")
     else:
         console.print(table)
         console.print(f"\n[dim]Showing {len(containers)} container(s). Use -a to show all.[/dim]")
@@ -487,9 +487,9 @@ def monitor(container, interval, count):
     
     \b
     Examples:
-      minicontainer monitor myapp
-      minicontainer monitor myapp -i 0.5   # Update every 0.5 seconds
-      minicontainer monitor myapp -n 10    # Show 10 updates then exit
+      kernelsight monitor myapp
+      kernelsight monitor myapp -i 0.5   # Update every 0.5 seconds
+      kernelsight monitor myapp -n 10    # Show 10 updates then exit
     """
     console.print(f"\n[bold cyan]📊 Live Monitor: {container}[/bold cyan]")
     console.print("[dim]Press Ctrl+C to exit[/dim]\n")
@@ -627,7 +627,7 @@ def inspect(container):
     
     \b
     Examples:
-      minicontainer inspect myapp
+      kernelsight inspect myapp
     """
     containers = get_container_list()
     target = next((c for c in containers if c["name"] == container or c["id"] == container), None)
@@ -676,9 +676,9 @@ def logs(container, tail, follow):
     
     \b
     Examples:
-      minicontainer logs myapp
-      minicontainer logs myapp -n 100     # Show last 100 lines
-      minicontainer logs myapp -f         # Follow logs
+      kernelsight logs myapp
+      kernelsight logs myapp -n 100     # Show last 100 lines
+      kernelsight logs myapp -f         # Follow logs
     """
     log_file = LOG_DIR / f"{container}.log"
     
@@ -712,9 +712,9 @@ def update(container, key, value):
     Keys: memory, cpu, pids
     
     Examples:
-      minicontainer update myapp memory 512m
-      minicontainer update myapp cpu 0.5
-      minicontainer update myapp pids 200
+      kernelsight update myapp memory 512m
+      kernelsight update myapp cpu 0.5
+      kernelsight update myapp pids 200
     """
     containers = get_container_list()
     target = next((c for c in containers if c["name"] == container or c["id"] == container), None)
@@ -762,14 +762,14 @@ def dashboard(port, host):
     
     \b
     Examples:
-      minicontainer dashboard
-      minicontainer dashboard -p 9000     # Use port 9000
+      kernelsight dashboard
+      kernelsight dashboard -p 9000     # Use port 9000
     """
     import uvicorn
     
     console.print(BANNER)
     console.print(Panel(
-        f"[bold green]🚀 Starting MiniContainer Dashboard[/bold green]\n\n"
+        f"[bold green]🚀 Starting KernelSight Dashboard[/bold green]\n\n"
         f"  API Server:  [cyan]http://localhost:{port}[/cyan]\n"
         f"  Dashboard:   [cyan]http://localhost:5173[/cyan]\n\n"
         f"  Time: {get_ist_time()}\n\n"
@@ -838,8 +838,8 @@ def prune(force):
     
     \b
     Examples:
-      minicontainer prune
-      minicontainer prune -f              # Force without confirmation
+      kernelsight prune
+      kernelsight prune -f              # Force without confirmation
     """
     containers = get_container_list()
     stopped = [c for c in containers if c["status"] == "stopped"]
@@ -871,7 +871,7 @@ def help_all():
     """Show all commands with detailed examples"""
     console.print(BANNER)
     console.print(Panel("""
-[bold cyan]📚 MiniContainer Command Reference[/bold cyan]
+[bold cyan]📚 KernelSight Command Reference[/bold cyan]
 
 [bold yellow]CONTAINER LIFECYCLE:[/bold yellow]
   [cyan]create[/cyan]    Create a new container with resource limits
@@ -896,24 +896,24 @@ def help_all():
 [bold yellow]EXAMPLES:[/bold yellow]
 
 [dim]# Create a container with limits[/dim]
-[white]minicontainer create -n webapp -r /tmp/alpine-rootfs -m 512m -c 0.5[/white]
+[white]kernelsight create -n webapp -r /tmp/alpine-rootfs -m 512m -c 0.5[/white]
 
 [dim]# Start and monitor[/dim]
-[white]minicontainer start webapp[/white]
-[white]minicontainer monitor webapp[/white]
+[white]kernelsight start webapp[/white]
+[white]kernelsight monitor webapp[/white]
 
 [dim]# View detailed info[/dim]
-[white]minicontainer inspect webapp[/white]
-[white]minicontainer ps -a --format json[/white]
+[white]kernelsight inspect webapp[/white]
+[white]kernelsight ps -a --format json[/white]
 
 [dim]# Update limits on the fly[/dim]
-[white]minicontainer update webapp memory 1g[/white]
-[white]minicontainer update webapp cpu 0.8[/white]
+[white]kernelsight update webapp memory 1g[/white]
+[white]kernelsight update webapp cpu 0.8[/white]
 
 [dim]# Cleanup[/dim]
-[white]minicontainer stop webapp[/white]
-[white]minicontainer rm webapp[/white]
-[white]minicontainer prune -f[/white]
+[white]kernelsight stop webapp[/white]
+[white]kernelsight rm webapp[/white]
+[white]kernelsight prune -f[/white]
 """, title="Help", border_style="cyan"))
 
 def main():

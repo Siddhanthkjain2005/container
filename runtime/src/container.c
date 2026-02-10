@@ -1,5 +1,5 @@
 /*
- * MiniContainer - Container lifecycle management
+ * KernelSight - Container lifecycle management
  */
 
 #define _GNU_SOURCE
@@ -8,7 +8,7 @@
 #include <stdarg.h>
 #include <dirent.h>
 
-#define STATE_DIR "/var/lib/minicontainer"
+#define STATE_DIR "/var/lib/kernelsight"
 
 static int log_level = 1;
 
@@ -186,7 +186,7 @@ int container_list(container_t ***containers, int *count) {
         }
         fclose(fp);
         snprintf(c->state_dir, sizeof(c->state_dir), "%s/%s", path, ent->d_name);
-        snprintf(c->cgroup_path, sizeof(c->cgroup_path), "/sys/fs/cgroup/minicontainer/%s", c->config.id);
+        snprintf(c->cgroup_path, sizeof(c->cgroup_path), "/sys/fs/cgroup/kernelsight/%s", c->config.id);
         
         if (n >= cap) { cap *= 2; list = realloc(list, sizeof(container_t*) * cap); }
         list[n++] = c;

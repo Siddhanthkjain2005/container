@@ -1,4 +1,4 @@
-"""MiniContainer - Container metrics collection"""
+"""KernelSight - Container metrics collection"""
 
 import time
 import threading
@@ -90,7 +90,7 @@ class MetricsCollector:
     def collect_all(self) -> Dict[str, MetricPoint]:
         """Collect metrics for all containers"""
         results = {}
-        cgroup_base = Path("/sys/fs/cgroup/minicontainer")
+        cgroup_base = Path("/sys/fs/cgroup/kernelsight")
         
         if not cgroup_base.exists():
             return results

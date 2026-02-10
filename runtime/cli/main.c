@@ -1,5 +1,5 @@
 /*
- * MiniContainer CLI - Low-level runtime interface
+ * KernelSight CLI - Low-level runtime interface
  */
 
 #define _GNU_SOURCE
@@ -8,7 +8,7 @@
 #include <time.h>
 
 static void print_usage(const char *prog) {
-    printf("MiniContainer Runtime v%s\n\n", MINICONTAINER_VERSION);
+    printf("KernelSight Runtime v%s\n\n", MINICONTAINER_VERSION);
     printf("Usage: %s <command> [options]\n\n", prog);
     printf("Commands:\n");
     printf("  create   Create a new container\n");

@@ -1,4 +1,4 @@
-"""MiniContainer - Lightweight Container Management"""
+"""KernelSight - Lightweight Container Management"""
 
 from .wrapper import Container, ContainerManager, manager
 from .metrics import MetricsCollector, collector

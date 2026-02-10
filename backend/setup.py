@@ -1,12 +1,12 @@
-"""MiniContainer - Setup configuration"""
+"""KernelSight - Setup configuration"""
 
 from setuptools import setup, find_packages
 
 setup(
-    name="minicontainer",
+    name="kernelsight",
     version="1.0.0",
     description="Lightweight container management with cgroups and namespaces",
-    author="MiniContainer Team",
+    author="KernelSight Team",
     packages=find_packages(),
     python_requires=">=3.9",
     install_requires=[
@@ -19,7 +19,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "minicontainer=minicontainer.cli:main",
+            "kernelsight=kernelsight.cli:main",
         ],
     },
     classifiers=[

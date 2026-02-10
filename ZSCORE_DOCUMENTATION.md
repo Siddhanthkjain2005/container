@@ -257,4 +257,4 @@ A: Scores recover gradually (about 30-60 seconds) once conditions return to norm
 A: Anything above 70 is generally fine. Below 50 means something needs attention.
 
 **Q: Can I change the thresholds?**
-A: Yes, in `backend/minicontainer/ml.py` you can adjust `base_z_threshold` and other parameters.
+A: Yes, in `backend/kernelsight/ml.py` you can adjust `base_z_threshold` and other parameters.

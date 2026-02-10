@@ -1259,7 +1259,7 @@ function ExecuteCommandModal({ container, isOpen, onClose, onExecute }) {
             </div>
           )}
 
-          {['2', '3'].includes(selectedCmd) && (
+          {['2'].includes(selectedCmd) && (
             <div className="form-group">
               <label>Memory Size: <strong>{memorySize} MB</strong></label>
               <input
@@ -1579,7 +1579,7 @@ function App() {
         break
       case '2':
         // Memory Stress - use yes|head instead of dd (device files blocked in chroot)
-        command = `echo '[Memory Stress] Allocating ${memorySize}MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt ${memorySize} ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "Allocated $i MB"; done; echo '[Done - memory persists until container restart]'; ls -sh /tmp/memstress | head -1`
+        command = `echo '[Memory Stress] Allocating ${memorySize}MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt ${memorySize} ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "Allocated $i MB"; done; echo '[Done - holding for ${duration}s]'; sleep ${duration}; rm -rf /tmp/memstress; echo '[Complete]'`
         break
       case '3':
         // CPU Spike Pattern - SAME AS controller.py
@@ -1631,7 +1631,7 @@ function App() {
       <header className="header">
         <div className="logo">
           <span className="logo-icon"><Icons.Rocket /></span>
-          <h1>Mini<span>Container</span></h1>
+          <h1>Kernel<span>Sight</span></h1>
         </div>
 
         <nav className="nav">
@@ -1640,7 +1640,6 @@ function App() {
             { id: 'stats', label: 'Resources', icon: Icons.BarChart },
             { id: 'insights', label: 'Insights', icon: Icons.Sparkles },
             { id: 'analytics', label: 'Analytics', icon: Icons.Brain },
-            { id: 'about', label: 'About', icon: Icons.Info },
           ].map(tab => (
             <button
               key={tab.id}
@@ -2297,64 +2296,7 @@ function App() {
           </div>
         )}
 
-        {currentPage === 'about' && (
-          <div className="page-content">
-            <div className="page-header">
-              <h2>About MiniContainer</h2>
-            </div>
-
-            <div className="section">
-              <h3>What is MiniContainer?</h3>
-              <p className="section-text">
-                MiniContainer is a lightweight Linux container runtime built from scratch using
-                Linux namespaces, cgroups v2, and a custom filesystem layer. It demonstrates
-                core containerization concepts similar to Docker.
-              </p>
-            </div>
-
-            <div className="section">
-              <h3>Architecture</h3>
-              <div className="arch-grid">
-                <div className="arch-card">
-                  <span className="icon-wrapper amber"><Icons.Terminal /></span>
-                  <h4>C Runtime</h4>
-                  <p>Low-level container operations: namespace creation, cgroup management, process isolation</p>
-                </div>
-                <div className="arch-card">
-                  <span className="icon-wrapper blue"><Icons.Server /></span>
-                  <h4>Python Backend</h4>
-                  <p>FastAPI server with WebSocket support for real-time metrics and container management</p>
-                </div>
-                <div className="arch-card">
-                  <span className="icon-wrapper pink"><Icons.Layers /></span>
-                  <h4>React Dashboard</h4>
-                  <p>Modern UI with live monitoring, container management, and ML analytics</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="section">
-              <h3>Key Technologies</h3>
-              <div className="tech-tags">
-                {['Linux Namespaces', 'Cgroups v2', 'setns()', 'FastAPI', 'WebSocket', 'React', 'Z-Score ML', 'Alpine Linux'].map(tech => (
-                  <span key={tech} className="tech-tag">{tech}</span>
-                ))}
-              </div>
-            </div>
-
-            <div className="section">
-              <h3>Features</h3>
-              <ul className="feature-list">
-                <li><Icons.Box /> Create, start, stop, and delete containers</li>
-                <li><Icons.Activity /> Real-time CPU, memory, and process monitoring</li>
-                <li><Icons.Terminal /> Execute commands inside containers with namespace isolation</li>
-                <li><Icons.Brain /> ML-based anomaly detection and health scoring</li>
-                <li><Icons.Cpu /> Resource limits (CPU, memory, PIDs)</li>
-                <li><Icons.Zap /> Live WebSocket updates</li>
-              </ul>
-            </div>
-          </div>
-        )}
+        {/* About section removed */}
       </main>
 
       <CreateContainerModal

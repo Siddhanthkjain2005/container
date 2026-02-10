@@ -1,4 +1,4 @@
-# MiniContainer Runtime Makefile
+# KernelSight Runtime Makefile
 
 CC = gcc
 CFLAGS = -Wall -Wextra -fPIC -g -O2
@@ -12,7 +12,7 @@ SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
 
 LIB_NAME = libminicontainer.so
-CLI_NAME = minicontainer-runtime
+CLI_NAME = kernelsight-runtime
 
 .PHONY: all clean install lib cli
 

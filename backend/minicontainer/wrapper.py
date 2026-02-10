@@ -1,4 +1,4 @@
-"""MiniContainer - Python wrapper for libminicontainer.so"""
+"""KernelSight - Python wrapper for libkernelsight.so"""
 
 import ctypes
 import os
@@ -7,7 +7,7 @@ from typing import Optional, List, Dict
 from pathlib import Path
 
 # Find the library
-LIB_PATH = Path(__file__).parent.parent.parent / "runtime" / "build" / "libminicontainer.so"
+LIB_PATH = Path(__file__).parent.parent.parent / "runtime" / "build" / "libkernelsight.so"
 
 class ResourceLimits(Structure):
     _fields_ = [
@@ -61,8 +61,8 @@ class Container:
         self.state = state
         self.pid = pid
         self.rootfs = rootfs
-        self.cgroup_path = cgroup_path or f"/sys/fs/cgroup/minicontainer/{id}"
-        self.state_dir = state_dir or f"/var/lib/minicontainer/containers/{id}"
+        self.cgroup_path = cgroup_path or f"/sys/fs/cgroup/kernelsight/{id}"
+        self.state_dir = state_dir or f"/var/lib/kernelsight/containers/{id}"
     
     def get_metrics(self) -> Dict:
         """Get container metrics from cgroup"""
@@ -107,7 +107,7 @@ class Container:
 class ContainerManager:
     """Manages containers using the C runtime or pure Python fallback"""
     
-    STATE_DIR = Path("/var/lib/minicontainer/containers")
+    STATE_DIR = Path("/var/lib/kernelsight/containers")
     
     def __init__(self):
         self._lib = None

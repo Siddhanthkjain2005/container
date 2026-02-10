@@ -58,8 +58,8 @@ class ConnectionManager:
 ws_manager = ConnectionManager()
 
 # Runtime path
-RUNTIME_PATH = Path("/home/student/container/runtime/build/minicontainer-runtime")
-CGROUP_BASE = Path("/sys/fs/cgroup/minicontainer")
+RUNTIME_PATH = Path("/home/student/container/runtime/build/kernelsight-runtime")
+CGROUP_BASE = Path("/sys/fs/cgroup/kernelsight")
 DASHBOARD_DIST = Path("/home/student/container/dashboard/dist")
 
 def run_runtime_command(args: List[str]) -> tuple:
@@ -79,7 +79,7 @@ def run_runtime_command(args: List[str]) -> tuple:
 def get_running_containers():
     """Get list of containers from state files with accurate state detection"""
     containers = []
-    state_dir = Path("/var/lib/minicontainer/containers")
+    state_dir = Path("/var/lib/kernelsight/containers")
     
     if state_dir.exists():
         for container_dir in state_dir.iterdir():
@@ -293,7 +293,7 @@ async def lifespan(app: FastAPI):
     task.cancel()
     collector.stop()
 
-app = FastAPI(title="MiniContainer API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="KernelSight API", version="1.0.0", lifespan=lifespan)
 
 # CORS
 app.add_middleware(
@@ -314,7 +314,7 @@ def root():
     index_file = DASHBOARD_DIST / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
-    return {"name": "MiniContainer API", "version": "1.0.0", "dashboard": "Run 'npm run build' in dashboard folder"}
+    return {"name": "KernelSight API", "version": "1.0.0", "dashboard": "Run 'npm run build' in dashboard folder"}
 
 @app.get("/api/containers", response_model=List[ContainerResponse])
 def list_containers():
@@ -346,7 +346,7 @@ def create_container(config: ContainerCreate):
     container_name = config.name or f"container-{random.randint(1000,9999)}"
     
     # Create cgroup for this container
-    cgroup_path = f"/sys/fs/cgroup/minicontainer/{container_name}"
+    cgroup_path = f"/sys/fs/cgroup/kernelsight/{container_name}"
     subprocess.run(["sudo", "mkdir", "-p", cgroup_path], check=False)
     
     # Set resource limits
@@ -375,7 +375,7 @@ while true; do sleep 1; done
     subprocess.run(["sudo", "chmod", "755", init_path], check=False)
     
     # Save state as "created" (not running)
-    state_dir = f"/var/lib/minicontainer/containers/{container_name}"
+    state_dir = f"/var/lib/kernelsight/containers/{container_name}"
     subprocess.run(["sudo", "mkdir", "-p", state_dir], check=False)
     state = f"id={container_name}\\nname={container_name}\\nstate=created\\npid=0\\nrootfs={rootfs}"
     subprocess.run(f"printf '{state}' | sudo tee {state_dir}/state.txt > /dev/null", shell=True)
@@ -385,7 +385,7 @@ while true; do sleep 1; done
 @app.post("/api/containers/{container_id}/start")
 def start_container(container_id: str):
     """Start a container using the C runtime"""
-    state_file = Path(f"/var/lib/minicontainer/containers/{container_id}/state.txt")
+    state_file = Path(f"/var/lib/kernelsight/containers/{container_id}/state.txt")
     if not state_file.exists():
         return {"error": "Container not found"}
     
@@ -399,7 +399,7 @@ def start_container(container_id: str):
     except:
         pass
     
-    cgroup_path = f"/sys/fs/cgroup/minicontainer/{container_id}"
+    cgroup_path = f"/sys/fs/cgroup/kernelsight/{container_id}"
     
     # Use the C runtime for proper namespace isolation with pivot_root
     def run_container():
@@ -470,7 +470,7 @@ def stop_container(container_id: str):
                 pass
         
         # Update state file to stopped
-        state_file = Path(f"/var/lib/minicontainer/containers/{container_id}/state.txt")
+        state_file = Path(f"/var/lib/kernelsight/containers/{container_id}/state.txt")
         if state_file.exists():
             try:
                 content = state_file.read_text()
@@ -518,7 +518,7 @@ async def exec_in_container(container_id: str, request: Request):
         return {"status": "error", "message": "Rootfs not found", "output": ""}
     
     # Find the container's cgroup (use string path)
-    cgroup_path = f"/sys/fs/cgroup/minicontainer/{container_id}"
+    cgroup_path = f"/sys/fs/cgroup/kernelsight/{container_id}"
     if not Path(cgroup_path).exists():
         return {"status": "error", "message": f"Container not found: {container_id}", "output": ""}
     
@@ -744,7 +744,7 @@ def export_csv():
         return FileResponse(
             csv_path, 
             media_type="text/csv",
-            filename="minicontainer_metrics.csv"
+            filename="kernelsight_metrics.csv"
         )
     raise HTTPException(status_code=404, detail="No data available yet")
 
@@ -756,7 +756,7 @@ def export_anomalies_csv():
         return FileResponse(
             csv_path, 
             media_type="text/csv",
-            filename="minicontainer_anomalies.csv"
+            filename="kernelsight_anomalies.csv"
         )
     raise HTTPException(status_code=404, detail="No anomaly data available yet")
 
@@ -768,7 +768,7 @@ def export_summary_csv():
         return FileResponse(
             csv_path, 
             media_type="text/csv",
-            filename="minicontainer_summary.csv"
+            filename="kernelsight_summary.csv"
         )
     raise HTTPException(status_code=404, detail="No summary data available yet")
 

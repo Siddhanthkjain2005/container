@@ -1,4 +1,4 @@
-"""MiniContainer - Metrics Storage and Process Information
+"""KernelSight - Metrics Storage and Process Information
 
 CSV-based storage for historical metrics data and process information retrieval.
 """
@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass
 
 # Storage directory for CSV files
-DATA_DIR = Path("/tmp/minicontainer/data")
+DATA_DIR = Path("/tmp/kernelsight/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # IST timezone (UTC+5:30)
@@ -347,8 +347,8 @@ class ProcessInspector:
     - We can see all container processes by looking at /proc on the host
     """
     
-    # Correct path: /sys/fs/cgroup/minicontainer/{container_id}/
-    CGROUP_BASE = Path("/sys/fs/cgroup/minicontainer")
+    # Correct path: /sys/fs/cgroup/kernelsight/{container_id}/
+    CGROUP_BASE = Path("/sys/fs/cgroup/kernelsight")
     
     # Process descriptions for common commands
     PROCESS_DESCRIPTIONS = {

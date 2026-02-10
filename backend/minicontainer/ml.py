@@ -1,4 +1,4 @@
-"""MiniContainer - Enhanced ML-based Anomaly Detection
+"""KernelSight - Enhanced ML-based Anomaly Detection
 
 Implements multiple detection algorithms:
 - Z-score detection with adaptive thresholds

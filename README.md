@@ -1,4 +1,4 @@
-# 🐳 MiniContainer
+# 🐳 KernelSight
 
 A lightweight container management system built from scratch using Linux cgroups v2 and namespaces. Features an interactive CLI and real-time monitoring dashboard.
 
@@ -46,23 +46,23 @@ cd dashboard && npm install && cd ..
 
 ```bash
 # Create a container
-minicontainer create --name myapp --memory 256m --cpus 0.5
+kernelsight create --name myapp --memory 256m --cpus 0.5
 
 # Start/stop containers
-minicontainer start myapp
-minicontainer stop myapp
+kernelsight start myapp
+kernelsight stop myapp
 
 # List containers
-minicontainer ps
+kernelsight ps
 
 # Live resource monitoring
-minicontainer stats
+kernelsight stats
 
 # Run one-shot container
-minicontainer run --name test --cmd "echo Hello World"
+kernelsight run --name test --cmd "echo Hello World"
 
 # Start dashboard
-minicontainer dashboard
+kernelsight dashboard
 ```
 
 #### Dashboard
@@ -70,7 +70,7 @@ minicontainer dashboard
 ```bash
 # Start the backend API
 cd backend
-python -m minicontainer.api
+python -m kernelsight.api
 
 # In another terminal, start the React dashboard
 cd dashboard
@@ -82,13 +82,13 @@ npm run dev
 ## Architecture
 
 ```
-minicontainer/
+kernelsight/
 ├── runtime/          # C container runtime
 │   ├── include/      # Header files
 │   ├── src/          # Source files (namespace, cgroup, filesystem)
 │   └── cli/          # C CLI for testing
 ├── backend/          # Python backend
-│   └── minicontainer/
+│   └── kernelsight/
 │       ├── cli.py    # Rich CLI
 │       ├── api.py    # FastAPI + WebSocket
 │       ├── wrapper.py # C library bindings
@@ -103,7 +103,7 @@ minicontainer/
 ### Container Creation
 
 1. **Clone with namespaces**: Uses `clone()` syscall with flags like `CLONE_NEWPID`, `CLONE_NEWNS`
-2. **Setup cgroup**: Creates a cgroup in `/sys/fs/cgroup/minicontainer/<id>`
+2. **Setup cgroup**: Creates a cgroup in `/sys/fs/cgroup/kernelsight/<id>`
 3. **Apply limits**: Writes to `memory.max`, `cpu.max`, `pids.max`
 4. **Pivot root**: Changes filesystem root to isolated rootfs
 5. **Execute command**: Runs the specified command as PID 1 inside container

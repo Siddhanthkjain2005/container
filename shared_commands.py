@@ -20,7 +20,8 @@ def get_workload_commands():
             "color": "cyan",
             # Use yes|head instead of dd (device files blocked in chroot)
             # Files persist in /tmp and are tracked by cgroups
-            "template": lambda duration, size_mb=50: f"echo '[Memory Stress] Allocating {size_mb}MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt {size_mb} ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo \"Allocated $i MB\"; done; echo '[Done - memory persists until container restart]'; ls -sh /tmp/memstress | head -1"
+            # Added sleep to hold memory for the duration
+            "template": lambda duration, size_mb=50: f"echo '[Memory Stress] Allocating {size_mb}MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt {size_mb} ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo \"Allocated $i MB\"; done; echo '[Done - holding for {duration}s]'; sleep {duration}; rm -rf /tmp/memstress; echo '[Complete]'"
         },
         "3": {
             "name": "CPU Spike Pattern",

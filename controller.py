@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MiniContainer Interactive TUI Controller
+"""KernelSight Interactive TUI Controller
 
 A beautiful terminal user interface for managing containers with real-time monitoring.
 Simplified and streamlined for real container management.
@@ -47,10 +47,10 @@ except ImportError:
 console = Console()
 
 # Configuration
-RUNTIME_PATH = Path("/home/student/container/runtime/build/minicontainer-runtime")
-CGROUP_BASE = Path("/sys/fs/cgroup/minicontainer")
+RUNTIME_PATH = Path("/home/student/container/runtime/build/kernelsight-runtime")
+CGROUP_BASE = Path("/sys/fs/cgroup/kernelsight")
 DEFAULT_ROOTFS = "/tmp/alpine-rootfs"
-STATE_DIR = Path("/var/lib/minicontainer")
+STATE_DIR = Path("/var/lib/kernelsight")
 
 def get_ist_time():
     """Get current IST time formatted"""
@@ -110,7 +110,7 @@ def run_runtime(args: List[str], capture=True, timeout=30) -> tuple:
 def get_containers() -> List[Container]:
     """Get list of all containers with accurate state detection"""
     containers = []
-    state_dir = Path("/var/lib/minicontainer/containers")
+    state_dir = Path("/var/lib/kernelsight/containers")
     
     if state_dir.exists():
         for container_dir in state_dir.iterdir():
@@ -318,7 +318,7 @@ def create_container_cmd():
     
     if not Path(rootfs).exists():
         console.print(f"[bold red]✗ Error: Rootfs path '{rootfs}' does not exist[/]")
-        console.print("[dim]Run: minicontainer setup-rootfs[/]")
+        console.print("[dim]Run: kernelsight setup-rootfs[/]")
         return
     
     memory = IntPrompt.ask("[bright_magenta]Memory limit (MB)[/]", default=256)
@@ -560,8 +560,8 @@ def system_info_cmd():
         ("Runtime Binary", str(RUNTIME_PATH), RUNTIME_PATH.exists()),
         ("Cgroup v2 Base", str(CGROUP_BASE), CGROUP_BASE.exists()),
         ("Default Rootfs", DEFAULT_ROOTFS, Path(DEFAULT_ROOTFS).exists()),
-        ("Container State", str(Path("/var/lib/minicontainer/containers")), 
-         Path("/var/lib/minicontainer/containers").exists()),
+        ("Container State", str(Path("/var/lib/kernelsight/containers")), 
+         Path("/var/lib/kernelsight/containers").exists()),
     ]
     
     for name, path, exists in checks:
@@ -805,7 +805,7 @@ def dashboard_info():
     table.add_column("Command", style="bright_yellow")
     
     table.add_row("1", "Setup Rootfs", "sudo bash scripts/setup_rootfs.sh")
-    table.add_row("2", "Start API Server", "cd backend && sudo PYTHONPATH=. ./venv/bin/python3 -m minicontainer.api")
+    table.add_row("2", "Start API Server", "cd backend && sudo PYTHONPATH=. ./venv/bin/python3 -m kernelsight.api")
     table.add_row("3", "Start Frontend", "cd dashboard && npm run dev")
     table.add_row("4", "Open Browser", "http://localhost:5173")
     

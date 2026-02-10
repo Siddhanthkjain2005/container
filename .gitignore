@@ -7,3 +7,6 @@ runtime/build/
 .DS_Store
 __pycache__/
 *.pyc
+/tmp/alpine-rootfs/
+runtime.log
+backend.log

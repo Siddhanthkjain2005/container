@@ -1,5 +1,5 @@
 /*
- * MiniContainer - Filesystem management
+ * KernelSight - Filesystem management
  */
 
 #define _GNU_SOURCE

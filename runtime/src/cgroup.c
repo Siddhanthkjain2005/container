@@ -1,5 +1,5 @@
 /*
- * MiniContainer - Linux Container Runtime
+ * KernelSight - Linux Container Runtime
  * cgroup.c - Cgroup v2 management implementation
  */
 
@@ -8,7 +8,7 @@
 
 /* Cgroup v2 base path */
 #define CGROUP_ROOT "/sys/fs/cgroup"
-#define MINICONTAINER_CGROUP "minicontainer"
+#define MINICONTAINER_CGROUP "kernelsight"
 
 /**
  * Check if cgroup v2 is available
@@ -87,12 +87,12 @@ static int write_cgroup_value(const char *path, const char *value) {
 }
 
 /**
- * Create the minicontainer cgroup hierarchy
+ * Create the kernelsight cgroup hierarchy
  */
 static int cgroup_create_hierarchy(void) {
     char path[PATH_MAX];
     
-    /* Create base minicontainer cgroup */
+    /* Create base kernelsight cgroup */
     snprintf(path, sizeof(path), "%s/%s", CGROUP_ROOT, MINICONTAINER_CGROUP);
     if (mkdir(path, 0755) != 0 && errno != EEXIST) {
         mc_log(3, "Failed to create cgroup directory %s: %s", path, strerror(errno));
@@ -110,12 +110,12 @@ static int cgroup_create_hierarchy(void) {
         }
     }
     
-    /* Enable controllers in minicontainer cgroup */
+    /* Enable controllers in kernelsight cgroup */
     snprintf(path, sizeof(path), "%s/%s/cgroup.subtree_control", 
              CGROUP_ROOT, MINICONTAINER_CGROUP);
     for (size_t i = 0; i < sizeof(controllers) / sizeof(controllers[0]); i++) {
         if (write_cgroup_value(path, controllers[i]) != MC_OK) {
-            mc_log(2, "Could not enable controller %s in minicontainer cgroup", controllers[i]);
+            mc_log(2, "Could not enable controller %s in kernelsight cgroup", controllers[i]);
         }
     }
     

@@ -1,5 +1,5 @@
 /*
- * MiniContainer - Linux Container Runtime
+ * KernelSight - Linux Container Runtime
  * namespace.c - Namespace management implementation
  */
 

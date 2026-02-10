@@ -1,5 +1,5 @@
 /*
- * MiniContainer - Linux Container Runtime
+ * KernelSight - Linux Container Runtime
  * container.h - Main header file
  */
 
@@ -24,7 +24,7 @@
 
 /* Version info */
 #define MINICONTAINER_VERSION "1.0.0"
-#define MINICONTAINER_NAME "minicontainer"
+#define MINICONTAINER_NAME "kernelsight"
 
 /* Container states */
 typedef enum {
