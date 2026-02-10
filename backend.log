@@ -350,3 +350,1009 @@ INFO:     127.0.0.1:56798 - "GET /api/containers HTTP/1.1" 200 OK
 [DEBUG] Exec received for container-1770230557495: echo '[Memory Stress] Allocating 50MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "...
 INFO:     127.0.0.1:47354 - "POST /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
 INFO:     127.0.0.1:47368 - "GET /api/containers HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER container-1770230557495] Command Output:
+============================================================
+  [Memory Stress] Allocating 50MB
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  Allocated 37 MB
+  Allocated 38 MB
+  Allocated 39 MB
+  Allocated 40 MB
+  Allocated 41 MB
+  Allocated 42 MB
+  Allocated 43 MB
+  Allocated 44 MB
+  Allocated 45 MB
+  Allocated 46 MB
+  Allocated 47 MB
+  Allocated 48 MB
+  Allocated 49 MB
+  Allocated 50 MB
+  [Done - memory persists until container restart]
+  total 50M
+============================================================
+
+[CONTAINER container-1770230557495] Command completed successfully
+[DEBUG] Exec received for container-1770230557495: echo '[Variable CPU] Starting alternating load pattern for 60s'; END=$(($(date +%s) + 60)); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 1; done; echo '[...
+INFO:     127.0.0.1:33526 - "POST /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33536 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     54.193.33.86:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     13.52.80.63:0 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     143.244.191.43:0 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     54.193.33.86:0 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     13.52.80.63:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     143.244.191.43:0 - "OPTIONS /api/containers HTTP/1.1" 200 OK
+INFO:     143.244.191.43:0 - "OPTIONS /api/containers HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     connection closed
+
+============================================================
+[CONTAINER container-1770230557495] Command Output:
+============================================================
+  [Variable CPU] Starting alternating load pattern for 60s
+============================================================
+
+[CONTAINER container-1770230557495] Command hit resource limits (exit code 137)
+INFO:     127.0.0.1:38172 - "POST /api/containers/container-1770230557495/stop HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38176 - "GET /api/containers HTTP/1.1" 200 OK
+[DEBUG] Exec received for container-1770230557495: echo '[Memory Stress] Allocating 50MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "...
+INFO:     127.0.0.1:38190 - "POST /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38196 - "GET /api/containers HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER container-1770230557495] Command Output:
+============================================================
+  [Memory Stress] Allocating 50MB
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  Allocated 37 MB
+  Allocated 38 MB
+  Allocated 39 MB
+  Allocated 40 MB
+  Allocated 41 MB
+  Allocated 42 MB
+  Allocated 43 MB
+  Allocated 44 MB
+  Allocated 45 MB
+  Allocated 46 MB
+  Allocated 47 MB
+  Allocated 48 MB
+  Allocated 49 MB
+  Allocated 50 MB
+  [Done - memory persists until container restart]
+  total 50M
+============================================================
+
+[CONTAINER container-1770230557495] Command completed successfully
+[DEBUG] Exec received for container-1770230557495: echo '[Spike Demo] Running for 60s'; END=$(($(date +%s) + 60)); while [ $(date +%s) -lt $END ]; do echo 'SPIKE!'; i=0; while [ $i -lt 1500000 ]; do i=$((i+1)); done; echo 'idle'; sleep 2; done; echo '...
+INFO:     127.0.0.1:59272 - "POST /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59278 - "GET /api/containers HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER container-1770230557495] Command Output:
+============================================================
+  [Spike Demo] Running for 60s
+  SPIKE!
+  idle
+  SPIKE!
+============================================================
+
+[CONTAINER container-1770230557495] Command hit resource limits (exit code 137)
+INFO:     127.0.0.1:59284 - "POST /api/containers/container-1770230557495/stop HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59290 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41860 - "POST /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41862 - "POST /api/containers/memlimit/start HTTP/1.1" 200 OK
+[DEBUG] Exec received for memlimit: echo [Memory Stress] Allocating 50MB; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo All...
+INFO:     127.0.0.1:33740 - "POST /api/containers/memlimit/exec HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER memlimit] Command Output:
+============================================================
+  [Memory Stress] Allocating 50MB
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  Allocated 37 MB
+  Allocated 38 MB
+  Allocated 39 MB
+  Allocated 40 MB
+  Allocated 41 MB
+  Allocated 42 MB
+  Allocated 43 MB
+  Allocated 44 MB
+  Allocated 45 MB
+  Allocated 46 MB
+  Allocated 47 MB
+  Allocated 48 MB
+  Allocated 49 MB
+  Allocated 50 MB
+  [Done - memory persists until container restart]
+  total 50M
+============================================================
+
+[CONTAINER memlimit] Command completed successfully
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "OPTIONS /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+[DEBUG] Exec received for container-1770230557495: echo '[Memory Stress] Allocating 36MB to container'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 36 ]; do dd if=/dev/zero of=/tmp/memstress/block$i bs=1M count=1 2>/dev/null; i...
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "POST /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER container-1770230557495] Command Output:
+============================================================
+  [Memory Stress] Allocating 36MB to container
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  [Memory allocated - will persist until container restart]
+  total 0
+============================================================
+
+[CONTAINER container-1770230557495] Command completed successfully
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "OPTIONS /api/containers HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50990 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "OPTIONS /api/containers/memlimit/stop HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "POST /api/containers/memlimit/stop HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "GET /api/containers HTTP/1.1" 200 OK
+[DEBUG] Exec received for container-1770230557495: echo '[Variable CPU] Starting alternating load pattern for 60s'; END=$(($(date +%s) + 60)); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 1; done; echo '[...
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "POST /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "OPTIONS /api/containers/container-1770230557495/stop HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER container-1770230557495] Command Output:
+============================================================
+  [Variable CPU] Starting alternating load pattern for 60s
+============================================================
+
+[CONTAINER container-1770230557495] Command hit resource limits (exit code 137)
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "POST /api/containers/container-1770230557495/stop HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "GET /api/containers HTTP/1.1" 200 OK
+[DEBUG] Exec received for container-1770230557495: echo '[Memory Stress] Allocating 36MB to container'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 36 ]; do dd if=/dev/zero of=/tmp/memstress/block$i bs=1M count=1 2>/dev/null; i...
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "POST /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER container-1770230557495] Command Output:
+============================================================
+  [Memory Stress] Allocating 36MB to container
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  [Memory allocated - will persist until container restart]
+  total 0
+============================================================
+
+[CONTAINER container-1770230557495] Command completed successfully
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "GET /api/containers HTTP/1.1" 200 OK
+[DEBUG] Exec received for container-1770230557495: echo '[Spike Demo] Running for 60s'; END=$(($(date +%s) + 60)); while [ $(date +%s) -lt $END ]; do echo 'SPIKE!'; i=0; while [ $i -lt 1500000 ]; do i=$((i+1)); done; echo 'idle'; sleep 2; done; echo '...
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "POST /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "GET /api/containers HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER container-1770230557495] Command Output:
+============================================================
+  [Spike Demo] Running for 60s
+  SPIKE!
+  idle
+  SPIKE!
+  idle
+============================================================
+
+[CONTAINER container-1770230557495] Command hit resource limits (exit code 137)
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "POST /api/containers/container-1770230557495/stop HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "GET /api/containers HTTP/1.1" 200 OK
+[DEBUG] Exec received for container-1770230557495: echo '[Gradual Increase] Running for 60s'; intensity=100000; END=$(($(date +%s) + 60)); while [ $(date +%s) -lt $END ]; do echo "Load: $intensity"; i=0; while [ $i -lt $intensity ]; do i=$((i+1)); don...
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "POST /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:718d:bd67:db5:88f7:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+
+============================================================
+[CONTAINER container-1770230557495] Command Output:
+============================================================
+  [Gradual Increase] Running for 60s
+  Load: 100000
+  Load: 150000
+  Load: 200000
+  Load: 250000
+  Load: 300000
+  Load: 350000
+  Load: 400000
+  Load: 450000
+  Load: 500000
+  Load: 550000
+  Load: 600000
+  Load: 650000
+  Load: 700000
+  Load: 750000
+  Load: 800000
+  Load: 850000
+  Load: 900000
+  Load: 950000
+  Load: 1000000
+  Load: 1050000
+  Load: 1100000
+  Load: 1150000
+  Load: 1200000
+  Load: 1250000
+  Load: 1300000
+  Load: 1350000
+  [Complete]
+============================================================
+
+[CONTAINER container-1770230557495] Command completed successfully
+INFO:     127.0.0.1:40236 - "POST /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40252 - "POST /api/containers/memfix/start HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40256 - "GET /api/containers/memfix/metrics HTTP/1.1" 200 OK
+[DEBUG] Exec received for memfix: echo Start Memory Stress; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); done; echo Done 50MB...
+INFO:     127.0.0.1:40262 - "POST /api/containers/memfix/exec HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER memfix] Command Output:
+============================================================
+  Start Memory Stress
+  Done 50MB
+============================================================
+
+[CONTAINER memfix] Command completed successfully
+INFO:     127.0.0.1:42340 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "OPTIONS /api/containers HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "OPTIONS /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+[DEBUG] Exec received for container-1770230557495: echo '[Memory Stress] Allocating 50MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "...
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "POST /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     connection closed
+
+============================================================
+[CONTAINER container-1770230557495] Command Output:
+============================================================
+  [Memory Stress] Allocating 50MB
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  Allocated 37 MB
+  Allocated 38 MB
+  Allocated 39 MB
+  Allocated 40 MB
+  Allocated 41 MB
+  Allocated 42 MB
+  Allocated 43 MB
+  Allocated 44 MB
+  Allocated 45 MB
+  Allocated 46 MB
+  Allocated 47 MB
+  Allocated 48 MB
+  Allocated 49 MB
+  Allocated 50 MB
+  [Done - memory persists until container restart]
+  total 50M
+============================================================
+
+[CONTAINER container-1770230557495] Command completed successfully
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "OPTIONS /api/containers HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "POST /api/containers HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "OPTIONS /api/containers/newest/exec HTTP/1.1" 200 OK
+[DEBUG] Exec received for newest: echo '[Memory Stress] Allocating 50MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "...
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "POST /api/containers/newest/exec HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57914 - "WebSocket /ws" [accepted]
+INFO:     connection open
+
+============================================================
+[CONTAINER newest] Command Output:
+============================================================
+  [Memory Stress] Allocating 50MB
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  Allocated 37 MB
+  Allocated 38 MB
+  Allocated 39 MB
+  Allocated 40 MB
+  Allocated 41 MB
+  Allocated 42 MB
+  Allocated 43 MB
+  Allocated 44 MB
+  Allocated 45 MB
+  Allocated 46 MB
+  Allocated 47 MB
+  Allocated 48 MB
+  Allocated 49 MB
+  Allocated 50 MB
+  [Done - memory persists until container restart]
+  total 50M
+============================================================
+
+[CONTAINER newest] Command completed successfully
+INFO:     127.0.0.1:57930 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57938 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35334 - "WebSocket /ws" [accepted]
+INFO:     connection open
+[DEBUG] Exec received for newest: echo '[Memory Stress] Allocating 50MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "...
+INFO:     127.0.0.1:35336 - "POST /api/containers/newest/exec HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35340 - "GET /api/containers HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER newest] Command Output:
+============================================================
+  [Memory Stress] Allocating 50MB
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  Allocated 37 MB
+  Allocated 38 MB
+  Allocated 39 MB
+  Allocated 40 MB
+  Allocated 41 MB
+  Allocated 42 MB
+  Allocated 43 MB
+  Allocated 44 MB
+  Allocated 45 MB
+  Allocated 46 MB
+  Allocated 47 MB
+  Allocated 48 MB
+  Allocated 49 MB
+  Allocated 50 MB
+  [Done - memory persists until container restart]
+  total 50M
+============================================================
+
+[CONTAINER newest] Command completed successfully
+INFO:     127.0.0.1:44452 - "POST /api/containers/memfix/stop HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44462 - "GET /api/containers HTTP/1.1" 200 OK
+[DEBUG] Exec received for newest: echo '[Memory Stress] Allocating 50MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "...
+INFO:     127.0.0.1:44464 - "POST /api/containers/newest/exec HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44474 - "GET /api/containers HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER newest] Command Output:
+============================================================
+  [Memory Stress] Allocating 50MB
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  Allocated 37 MB
+  Allocated 38 MB
+  Allocated 39 MB
+  Allocated 40 MB
+  Allocated 41 MB
+  Allocated 42 MB
+  Allocated 43 MB
+  Allocated 44 MB
+  Allocated 45 MB
+  Allocated 46 MB
+  Allocated 47 MB
+  Allocated 48 MB
+  Allocated 49 MB
+  Allocated 50 MB
+  [Done - memory persists until container restart]
+  total 50M
+============================================================
+
+[CONTAINER newest] Command completed successfully
+[DEBUG] Exec received for newest: echo '[Variable CPU] Starting alternating load pattern for 60s'; END=$(($(date +%s) + 60)); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 1; done; echo '[...
+INFO:     127.0.0.1:35166 - "POST /api/containers/newest/exec HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35176 - "GET /api/containers HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER newest] Command Output:
+============================================================
+  [Variable CPU] Starting alternating load pattern for 60s
+============================================================
+
+[CONTAINER newest] Command hit resource limits (exit code 137)
+INFO:     127.0.0.1:53464 - "POST /api/containers/newest/stop HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53478 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50682 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44266 - "POST /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44270 - "POST /api/containers/checkpid/start HTTP/1.1" 200 OK
+[DEBUG] Exec received for checkpid: echo Start; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); done; echo Done_50MB...
+INFO:     127.0.0.1:53850 - "POST /api/containers/checkpid/exec HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER checkpid] Command Output:
+============================================================
+  Start
+  Done_50MB
+============================================================
+
+[CONTAINER checkpid] Command completed successfully
+INFO:     127.0.0.1:56148 - "GET /api/containers HTTP/1.1" 200 OK
+[DEBUG] Exec received for container-1770230557495: echo '[Memory Stress] Allocating 50MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "...
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "POST /api/containers/container-1770230557495/exec HTTP/1.1" 200 OK
+INFO:     2405:201:d013:18af:708f:11b5:1871:a965:0 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:60780 - "WebSocket /ws" [accepted]
+INFO:     connection open
+
+============================================================
+[CONTAINER container-1770230557495] Command Output:
+============================================================
+  [Memory Stress] Allocating 50MB
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  Allocated 37 MB
+  Allocated 38 MB
+  Allocated 39 MB
+  Allocated 40 MB
+  Allocated 41 MB
+  Allocated 42 MB
+  Allocated 43 MB
+  Allocated 44 MB
+  Allocated 45 MB
+  Allocated 46 MB
+  Allocated 47 MB
+  Allocated 48 MB
+  Allocated 49 MB
+  Allocated 50 MB
+  [Done - memory persists until container restart]
+  total 50M
+============================================================
+
+[CONTAINER container-1770230557495] Command completed successfully
+INFO:     127.0.0.1:60794 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60796 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33982 - "POST /api/containers/checkpid/stop HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33994 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33996 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:34002 - "DELETE /api/containers/checkpid HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34010 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34014 - "DELETE /api/containers/memfix HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34020 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34032 - "DELETE /api/containers/newest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34046 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34062 - "DELETE /api/containers/memlimit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34074 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34082 - "DELETE /api/containers/container-1770230557495 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34084 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32950 - "POST /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32964 - "GET /api/containers HTTP/1.1" 200 OK
+[DEBUG] Exec received for nah: echo '[Memory Stress] Allocating 50MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "...
+INFO:     127.0.0.1:32972 - "POST /api/containers/nah/exec HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32986 - "GET /api/containers HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER nah] Command Output:
+============================================================
+  [Memory Stress] Allocating 50MB
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  Allocated 37 MB
+  Allocated 38 MB
+  Allocated 39 MB
+  Allocated 40 MB
+  Allocated 41 MB
+  Allocated 42 MB
+  Allocated 43 MB
+  Allocated 44 MB
+  Allocated 45 MB
+  Allocated 46 MB
+  Allocated 47 MB
+  Allocated 48 MB
+  Allocated 49 MB
+  Allocated 50 MB
+  [Done - memory persists until container restart]
+  total 50M
+============================================================
+
+[CONTAINER nah] Command completed successfully
+INFO:     127.0.0.1:45226 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43598 - "POST /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43606 - "POST /api/containers/monitor/start HTTP/1.1" 200 OK
+[DEBUG] Exec received for monitor: echo Start; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); done; echo Done...
+INFO:     127.0.0.1:59892 - "POST /api/containers/monitor/exec HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER monitor] Command Output:
+============================================================
+  Start
+  Done
+============================================================
+
+[CONTAINER monitor] Command completed successfully
+INFO:     127.0.0.1:48512 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43160 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:56728 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56732 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:56746 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51044 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:51048 - "POST /api/containers/monitor/stop HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51054 - "GET /api/containers HTTP/1.1" 200 OK
+[DEBUG] Exec received for nah: echo '[Variable CPU] Starting alternating load pattern for 60s'; END=$(($(date +%s) + 60)); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 1; done; echo '[...
+INFO:     127.0.0.1:51064 - "POST /api/containers/nah/exec HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51068 - "GET /api/containers HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER nah] Command Output:
+============================================================
+  [Variable CPU] Starting alternating load pattern for 60s
+  [Complete]
+============================================================
+
+[CONTAINER nah] Command completed successfully
+INFO:     127.0.0.1:40512 - "POST /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40518 - "GET /api/containers HTTP/1.1" 200 OK
+[DEBUG] Exec received for dude: echo '[Memory Stress] Allocating 50MB'; rm -rf /tmp/memstress; mkdir -p /tmp/memstress; i=0; while [ $i -lt 50 ]; do yes AAAAAAAAAAAAAAAA | head -c 1048576 > /tmp/memstress/block$i; i=$((i+1)); echo "...
+INFO:     127.0.0.1:56170 - "POST /api/containers/dude/exec HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56174 - "GET /api/containers HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER dude] Command Output:
+============================================================
+  [Memory Stress] Allocating 50MB
+  Allocated 1 MB
+  Allocated 2 MB
+  Allocated 3 MB
+  Allocated 4 MB
+  Allocated 5 MB
+  Allocated 6 MB
+  Allocated 7 MB
+  Allocated 8 MB
+  Allocated 9 MB
+  Allocated 10 MB
+  Allocated 11 MB
+  Allocated 12 MB
+  Allocated 13 MB
+  Allocated 14 MB
+  Allocated 15 MB
+  Allocated 16 MB
+  Allocated 17 MB
+  Allocated 18 MB
+  Allocated 19 MB
+  Allocated 20 MB
+  Allocated 21 MB
+  Allocated 22 MB
+  Allocated 23 MB
+  Allocated 24 MB
+  Allocated 25 MB
+  Allocated 26 MB
+  Allocated 27 MB
+  Allocated 28 MB
+  Allocated 29 MB
+  Allocated 30 MB
+  Allocated 31 MB
+  Allocated 32 MB
+  Allocated 33 MB
+  Allocated 34 MB
+  Allocated 35 MB
+  Allocated 36 MB
+  Allocated 37 MB
+  Allocated 38 MB
+  Allocated 39 MB
+  Allocated 40 MB
+  Allocated 41 MB
+  Allocated 42 MB
+  Allocated 43 MB
+  Allocated 44 MB
+  Allocated 45 MB
+  Allocated 46 MB
+  Allocated 47 MB
+  Allocated 48 MB
+  Allocated 49 MB
+  Allocated 50 MB
+  [Done - memory persists until container restart]
+  total 50M
+============================================================
+
+[CONTAINER dude] Command completed successfully
+[DEBUG] Exec received for dude: echo '[Variable CPU] Starting alternating load pattern for 60s'; END=$(($(date +%s) + 60)); while [ $(date +%s) -lt $END ]; do i=0; while [ $i -lt 800000 ]; do i=$((i+1)); done; sleep 1; done; echo '[...
+INFO:     127.0.0.1:56188 - "POST /api/containers/dude/exec HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56204 - "GET /api/containers HTTP/1.1" 200 OK
+
+============================================================
+[CONTAINER dude] Command Output:
+============================================================
+  [Variable CPU] Starting alternating load pattern for 60s
+============================================================
+
+[CONTAINER dude] Command hit resource limits (exit code 137)
+INFO:     127.0.0.1:53512 - "POST /api/containers/dude/stop HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53520 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     127.0.0.1:44386 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:44370 - "GET /api/containers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52844 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     Shutting down
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [32168]

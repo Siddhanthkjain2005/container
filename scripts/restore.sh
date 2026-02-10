@@ -1,9 +1,9 @@
 #!/bin/bash
-# Restoration script for MiniContainer environment
+# Restoration script for KernelSight environment
 PROJECT_ROOT="/home/student/container"
 ROOTFS="/tmp/alpine-rootfs"
 
-echo "==== MiniContainer Restoration ===="
+echo "==== KernelSight Restoration ===="
 
 # 1. Setup Rootfs
 if [ ! -f "$ROOTFS/bin/busybox" ]; then
@@ -15,8 +15,8 @@ fi
 
 # 2. Initialize Cgroups
 echo "[2/5] Initializing cgroups..."
-sudo mkdir -p /sys/fs/cgroup/minicontainer
-sudo chmod -R 777 /sys/fs/cgroup/minicontainer
+sudo mkdir -p /sys/fs/cgroup/kernelsight
+sudo chmod -R 777 /sys/fs/cgroup/kernelsight
 
 # Enable controllers in the subtree so child containers inherit them
 # This is crucial for resource accounting (CPU/Memory metrics)
@@ -29,11 +29,11 @@ if [ -f /sys/fs/cgroup/cgroup.subtree_control ]; then
     done
 fi
 
-if [ -f /sys/fs/cgroup/minicontainer/cgroup.subtree_control ]; then
-    echo "Enabling controllers in minicontainer subtree..."
-    sudo bash -c "echo '+cpu' > /sys/fs/cgroup/minicontainer/cgroup.subtree_control" 2>/dev/null
-    sudo bash -c "echo '+memory' > /sys/fs/cgroup/minicontainer/cgroup.subtree_control" 2>/dev/null
-    sudo bash -c "echo '+pids' > /sys/fs/cgroup/minicontainer/cgroup.subtree_control" 2>/dev/null
+if [ -f /sys/fs/cgroup/kernelsight/cgroup.subtree_control ]; then
+    echo "Enabling controllers in kernelsight subtree..."
+    sudo bash -c "echo '+cpu' > /sys/fs/cgroup/kernelsight/cgroup.subtree_control" 2>/dev/null
+    sudo bash -c "echo '+memory' > /sys/fs/cgroup/kernelsight/cgroup.subtree_control" 2>/dev/null
+    sudo bash -c "echo '+pids' > /sys/fs/cgroup/kernelsight/cgroup.subtree_control" 2>/dev/null
 fi
 
 # 3. Build Runtime
@@ -44,7 +44,7 @@ cd "$PROJECT_ROOT/runtime" && make > /dev/null
 if ! ss -tulpn | grep -q ":8000 "; then
     echo "[4/5] Starting Backend API..."
     cd "$PROJECT_ROOT/backend"
-    sudo nohup ./venv/bin/python3 -m minicontainer.api > "$PROJECT_ROOT/backend.log" 2>&1 &
+    sudo nohup ./venv/bin/python3 -m kernelsight.api > "$PROJECT_ROOT/backend.log" 2>&1 &
     sleep 2
 else
     echo "[4/5] Backend already running on port 8000"
